@@ -68,6 +68,7 @@ results/  # Ignore the results directory
 *.jpeg
 *.png
 *.csv
+*.txt
 
 # OS specific
 .DS_Store
