@@ -1,0 +1,31 @@
+Detected 4 holds:
+Cropped region: x=885, y=112, w=64, h=432
+--------------------------------------------------
+Hold 1: rail
+  Position in original: (925, 498)
+  Position in crop: (40, 386)
+  Grid position: (7, 16)
+  Size: (33, 19)
+  Area: 370.5 pixels
+--------------------------------------------------
+Hold 2: sloper
+  Position in original: (925, 422)
+  Position in crop: (40, 310)
+  Grid position: (7, 12)
+  Size: (36, 34)
+  Area: 397.5 pixels
+--------------------------------------------------
+Hold 3: pinch
+  Position in original: (932, 305)
+  Position in crop: (47, 193)
+  Grid position: (8, 8)
+  Size: (24, 28)
+  Area: 434.5 pixels
+--------------------------------------------------
+Hold 4: sloper
+  Position in original: (906, 178)
+  Position in crop: (21, 66)
+  Grid position: (3, 2)
+  Size: (32, 61)
+  Area: 842.5 pixels
+--------------------------------------------------

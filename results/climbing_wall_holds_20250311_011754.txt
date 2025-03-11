@@ -1,0 +1,59 @@
+Detected 8 holds:
+Cropped region: x=242, y=0, w=636, h=655
+--------------------------------------------------
+Hold 1: foothold
+  Position in original: (326, 584)
+  Position in crop: (84, 584)
+  Grid position: (1, 15)
+  Size: (62, 32)
+  Area: 842.0 pixels
+--------------------------------------------------
+Hold 2: sloper
+  Position in original: (800, 492)
+  Position in crop: (558, 492)
+  Grid position: (10, 12)
+  Size: (49, 43)
+  Area: 1152.5 pixels
+--------------------------------------------------
+Hold 3: foothold
+  Position in original: (793, 432)
+  Position in crop: (551, 432)
+  Grid position: (9, 11)
+  Size: (45, 43)
+  Area: 1422.5 pixels
+--------------------------------------------------
+Hold 4: rail
+  Position in original: (474, 328)
+  Position in crop: (232, 328)
+  Grid position: (4, 8)
+  Size: (36, 23)
+  Area: 535.5 pixels
+--------------------------------------------------
+Hold 5: foothold
+  Position in original: (614, 277)
+  Position in crop: (372, 277)
+  Grid position: (6, 7)
+  Size: (26, 30)
+  Area: 550.0 pixels
+--------------------------------------------------
+Hold 6: foothold
+  Position in original: (581, 247)
+  Position in crop: (339, 247)
+  Grid position: (5, 5)
+  Size: (48, 88)
+  Area: 2643.5 pixels
+--------------------------------------------------
+Hold 7: foothold
+  Position in original: (526, 169)
+  Position in crop: (284, 169)
+  Grid position: (4, 3)
+  Size: (45, 49)
+  Area: 1583.0 pixels
+--------------------------------------------------
+Hold 8: foothold
+  Position in original: (556, 71)
+  Position in crop: (314, 71)
+  Grid position: (5, 1)
+  Size: (32, 37)
+  Area: 781.5 pixels
+--------------------------------------------------

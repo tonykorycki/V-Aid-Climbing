@@ -1,0 +1,206 @@
+Detected 29 holds:
+Cropped region: x=0, y=0, w=1000, h=750
+--------------------------------------------------
+Hold 1: sloper
+  Position in original: (916, 736)
+  Position in crop: (916, 736)
+  Grid position: (10, 17)
+  Size: (107, 20)
+  Area: 1052.5 pixels
+--------------------------------------------------
+Hold 2: rail
+  Position in original: (828, 734)
+  Position in crop: (828, 734)
+  Grid position: (9, 17)
+  Size: (53, 19)
+  Area: 707.0 pixels
+--------------------------------------------------
+Hold 3: micro
+  Position in original: (733, 737)
+  Position in crop: (733, 737)
+  Grid position: (8, 17)
+  Size: (39, 25)
+  Area: 291.0 pixels
+--------------------------------------------------
+Hold 4: foothold
+  Position in original: (464, 735)
+  Position in crop: (464, 735)
+  Grid position: (4, 17)
+  Size: (141, 30)
+  Area: 1751.5 pixels
+--------------------------------------------------
+Hold 5: micro
+  Position in original: (611, 721)
+  Position in crop: (611, 721)
+  Grid position: (6, 17)
+  Size: (62, 9)
+  Area: 250.0 pixels
+--------------------------------------------------
+Hold 6: micro
+  Position in original: (495, 724)
+  Position in crop: (495, 724)
+  Grid position: (5, 17)
+  Size: (37, 16)
+  Area: 256.5 pixels
+--------------------------------------------------
+Hold 7: micro
+  Position in original: (386, 716)
+  Position in crop: (386, 716)
+  Grid position: (4, 17)
+  Size: (49, 6)
+  Area: 201.0 pixels
+--------------------------------------------------
+Hold 8: micro
+  Position in original: (180, 708)
+  Position in crop: (180, 708)
+  Grid position: (1, 16)
+  Size: (56, 5)
+  Area: 220.0 pixels
+--------------------------------------------------
+Hold 9: foothold
+  Position in original: (679, 633)
+  Position in crop: (679, 633)
+  Grid position: (7, 14)
+  Size: (52, 46)
+  Area: 1269.5 pixels
+--------------------------------------------------
+Hold 10: rail
+  Position in original: (811, 534)
+  Position in crop: (811, 534)
+  Grid position: (9, 12)
+  Size: (65, 41)
+  Area: 1521.0 pixels
+--------------------------------------------------
+Hold 11: micro
+  Position in original: (306, 499)
+  Position in crop: (306, 499)
+  Grid position: (3, 11)
+  Size: (11, 34)
+  Area: 230.5 pixels
+--------------------------------------------------
+Hold 12: micro
+  Position in original: (48, 467)
+  Position in crop: (48, 467)
+  Grid position: (0, 10)
+  Size: (24, 20)
+  Area: 277.5 pixels
+--------------------------------------------------
+Hold 13: micro
+  Position in original: (305, 465)
+  Position in crop: (305, 465)
+  Grid position: (3, 10)
+  Size: (34, 18)
+  Area: 294.5 pixels
+--------------------------------------------------
+Hold 14: foothold
+  Position in original: (399, 394)
+  Position in crop: (399, 394)
+  Grid position: (4, 9)
+  Size: (34, 25)
+  Area: 534.0 pixels
+--------------------------------------------------
+Hold 15: micro
+  Position in original: (7, 345)
+  Position in crop: (7, 345)
+  Grid position: (0, 7)
+  Size: (15, 47)
+  Area: 483.5 pixels
+--------------------------------------------------
+Hold 16: pocket
+  Position in original: (513, 319)
+  Position in crop: (513, 319)
+  Grid position: (5, 6)
+  Size: (30, 56)
+  Area: 652.0 pixels
+--------------------------------------------------
+Hold 17: sloper
+  Position in original: (890, 299)
+  Position in crop: (890, 299)
+  Grid position: (10, 5)
+  Size: (88, 111)
+  Area: 4357.5 pixels
+--------------------------------------------------
+Hold 18: micro
+  Position in original: (406, 247)
+  Position in crop: (406, 247)
+  Grid position: (4, 5)
+  Size: (18, 18)
+  Area: 215.0 pixels
+--------------------------------------------------
+Hold 19: micro
+  Position in original: (365, 231)
+  Position in crop: (365, 231)
+  Grid position: (4, 5)
+  Size: (20, 27)
+  Area: 364.5 pixels
+--------------------------------------------------
+Hold 20: rail
+  Position in original: (852, 229)
+  Position in crop: (852, 229)
+  Grid position: (9, 5)
+  Size: (77, 29)
+  Area: 1188.5 pixels
+--------------------------------------------------
+Hold 21: micro
+  Position in original: (900, 221)
+  Position in crop: (900, 221)
+  Grid position: (10, 5)
+  Size: (18, 19)
+  Area: 208.5 pixels
+--------------------------------------------------
+Hold 22: micro
+  Position in original: (749, 210)
+  Position in crop: (749, 210)
+  Grid position: (8, 4)
+  Size: (23, 16)
+  Area: 310.5 pixels
+--------------------------------------------------
+Hold 23: micro
+  Position in original: (991, 204)
+  Position in crop: (991, 204)
+  Grid position: (11, 4)
+  Size: (17, 18)
+  Area: 202.0 pixels
+--------------------------------------------------
+Hold 24: micro
+  Position in original: (664, 204)
+  Position in crop: (664, 204)
+  Grid position: (7, 4)
+  Size: (34, 25)
+  Area: 401.0 pixels
+--------------------------------------------------
+Hold 25: sloper
+  Position in original: (676, 148)
+  Position in crop: (676, 148)
+  Grid position: (7, 2)
+  Size: (61, 48)
+  Area: 991.5 pixels
+--------------------------------------------------
+Hold 26: micro
+  Position in original: (365, 129)
+  Position in crop: (365, 129)
+  Grid position: (4, 2)
+  Size: (16, 30)
+  Area: 230.5 pixels
+--------------------------------------------------
+Hold 27: micro
+  Position in original: (809, 123)
+  Position in crop: (809, 123)
+  Grid position: (9, 2)
+  Size: (26, 20)
+  Area: 354.5 pixels
+--------------------------------------------------
+Hold 28: micro
+  Position in original: (150, 48)
+  Position in crop: (150, 48)
+  Grid position: (1, 0)
+  Size: (16, 24)
+  Area: 279.5 pixels
+--------------------------------------------------
+Hold 29: sloper
+  Position in original: (481, 133)
+  Position in crop: (481, 133)
+  Grid position: (4, 0)
+  Size: (272, 267)
+  Area: 18429.5 pixels
+--------------------------------------------------

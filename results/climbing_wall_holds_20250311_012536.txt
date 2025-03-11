@@ -1,0 +1,108 @@
+Detected 15 holds:
+Cropped region: x=0, y=0, w=937, h=673
+--------------------------------------------------
+Hold 1: sloper
+  Position in original: (327, 591)
+  Position in crop: (327, 591)
+  Grid position: (4, 15)
+  Size: (64, 46)
+  Area: 1323.5 pixels
+--------------------------------------------------
+Hold 2: sloper
+  Position in original: (55, 524)
+  Position in crop: (55, 524)
+  Grid position: (0, 14)
+  Size: (22, 33)
+  Area: 290.5 pixels
+--------------------------------------------------
+Hold 3: sloper
+  Position in original: (96, 524)
+  Position in crop: (96, 524)
+  Grid position: (1, 14)
+  Size: (36, 36)
+  Area: 516.5 pixels
+--------------------------------------------------
+Hold 4: sloper
+  Position in original: (800, 497)
+  Position in crop: (800, 497)
+  Grid position: (10, 13)
+  Size: (49, 53)
+  Area: 1646.0 pixels
+--------------------------------------------------
+Hold 5: foothold
+  Position in original: (793, 435)
+  Position in crop: (793, 435)
+  Grid position: (10, 11)
+  Size: (45, 48)
+  Area: 1637.5 pixels
+--------------------------------------------------
+Hold 6: sloper
+  Position in original: (521, 407)
+  Position in crop: (521, 407)
+  Grid position: (6, 10)
+  Size: (31, 33)
+  Area: 404.0 pixels
+--------------------------------------------------
+Hold 7: foothold
+  Position in original: (473, 333)
+  Position in crop: (473, 333)
+  Grid position: (6, 8)
+  Size: (37, 32)
+  Area: 814.0 pixels
+--------------------------------------------------
+Hold 8: pinch
+  Position in original: (615, 280)
+  Position in crop: (615, 280)
+  Grid position: (7, 7)
+  Size: (28, 36)
+  Area: 778.5 pixels
+--------------------------------------------------
+Hold 9: sloper
+  Position in original: (506, 244)
+  Position in crop: (506, 244)
+  Grid position: (6, 6)
+  Size: (40, 32)
+  Area: 584.5 pixels
+--------------------------------------------------
+Hold 10: jug
+  Position in original: (581, 248)
+  Position in crop: (581, 248)
+  Grid position: (7, 6)
+  Size: (48, 91)
+  Area: 2775.0 pixels
+--------------------------------------------------
+Hold 11: sloper
+  Position in original: (324, 219)
+  Position in crop: (324, 219)
+  Grid position: (4, 5)
+  Size: (61, 88)
+  Area: 2109.0 pixels
+--------------------------------------------------
+Hold 12: foothold
+  Position in original: (720, 168)
+  Position in crop: (720, 168)
+  Grid position: (9, 4)
+  Size: (22, 22)
+  Area: 352.5 pixels
+--------------------------------------------------
+Hold 13: sloper
+  Position in original: (630, 165)
+  Position in crop: (630, 165)
+  Grid position: (8, 4)
+  Size: (44, 28)
+  Area: 682.5 pixels
+--------------------------------------------------
+Hold 14: pinch
+  Position in original: (520, 170)
+  Position in crop: (520, 170)
+  Grid position: (6, 4)
+  Size: (57, 51)
+  Area: 1990.0 pixels
+--------------------------------------------------
+Hold 15: pinch
+  Position in original: (556, 71)
+  Position in crop: (556, 71)
+  Grid position: (7, 1)
+  Size: (33, 37)
+  Area: 914.5 pixels
+--------------------------------------------------
