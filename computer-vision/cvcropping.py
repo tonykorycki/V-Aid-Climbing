@@ -109,11 +109,11 @@ def detect_and_classify_holds(image_path, target_color='red', sensitivity=25, mi
     cropped_region = (crop_x, crop_y, crop_w, crop_h)
     
     # Create a 12x18 grid map (VERTICAL orientation - 12 columns, 18 rows) for the cropped region
-    grid_map = np.zeros((18, 12), dtype=np.int32)
+    grid_map = np.zeros((40, 26), dtype=np.int32)
     
     # Calculate cell dimensions based on the cropped region
-    cell_width = crop_w / 12  # 12 columns
-    cell_height = crop_h / 18  # 18 rows
+    cell_width = crop_w / 26  # 12 columns
+    cell_height = crop_h / 40  # 18 rows
     
     # Process each contour (potential hold)
     holds_info = []
@@ -132,8 +132,8 @@ def detect_and_classify_holds(image_path, target_color='red', sensitivity=25, mi
         rel_center_x, rel_center_y = center_x - crop_x, center_y - crop_y
         
         # Map center to grid coordinates (with vertical orientation)
-        grid_x = max(0, min(11, int(rel_center_x / cell_width)))
-        grid_y = max(0, min(17, int(rel_center_y / cell_height)))
+        grid_x = max(0, min(25, int(rel_center_x / cell_width)))
+        grid_y = max(0, min(39, int(rel_center_y / cell_height)))
         
         # Check if hold is within the cropped region
         if 0 <= rel_x < crop_w and 0 <= rel_y < crop_h:
@@ -484,6 +484,7 @@ def main():
         print(f"\nDetailed results saved to: {result_file}")
         
         # Show plot
+        
         plt.show()
         
     except Exception as e:
