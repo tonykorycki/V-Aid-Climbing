@@ -6,7 +6,13 @@ from datetime import datetime
 import torch
 from ultralytics import YOLO
 from PIL import Image
-from io import BytesIO
+from io import BytesIO 
+
+# "python -m venv venv" to open virtual machine. ".venv\Scripts\activate" to activate virtual machine. "deactivate" to deactivate virtual machine.
+# pip install opencv-python numpy matplotlib torch ultralytics pillow (Install these libraries if you're trying to run this file); 
+
+#This file is a combination of the previous two files. It uses YOLO to detect holds and volumes, and then uses a color check to determine if the hold is valid.
+#It then maps the holds onto a 12x12 grid and predicts the difficulty of the route based on the grid map.
 
 ##############################################################################
 # YOLO + COLOR-BASED HOLD/Volume DETECTION WITH GRID MAPPING
