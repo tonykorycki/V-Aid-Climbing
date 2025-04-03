@@ -685,7 +685,7 @@ def generate_route_description(grid_map: np.ndarray, difficulty: Optional[str] =
         use_local_llm: Whether to use a local LLM or an API
         api_url: URL for API-based LLM if not using local LLM
         
-    Returns:
+    Returns:    
         str: Natural language description of the climbing route
     """
     # Convert grid to string representation for the prompt
