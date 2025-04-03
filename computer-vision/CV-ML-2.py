@@ -219,7 +219,7 @@ def detect_and_classify_holds(image_path,
     # Filter out volumes that are too isolated
 
     
-    volume_threshold = 0.1 * min(orig_w, orig_h)  # e.g., 10% of the smaller image dimension
+    volume_threshold = 0.05 * min(orig_w, orig_h)  # e.g., 10% of the smaller image dimension
     holds_info = filter_isolated_volumes(holds_info, volume_threshold)
 
     return holds_info, grid_map, masked_image, result_image, cropped_region
