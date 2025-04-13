@@ -1,31 +1,46 @@
 #include <SoftwareSerial.h>
+#include <SD.h>
 
 SoftwareSerial mySerial(10, 11);
 
+const int chipSelect = 4;
 const int delayTime = 1000;
+
+File footholdFile;
 
 void setup() {
   mySerial.begin(9600);
   Serial.begin(9600);
-  Serial.println("Scanning");
+  Serial.println("Scanning Now");
+
+  if (!SD.begin(chipSelect)) {
+    Serial.println("SD card initialization failed!");
+    return;
+  }
+
+  footholdFile = SD.open("foothold.txt");
+  if (!footholdFile) {
+    Serial.println("Error opening foothold.txt");
+    return;
+  }
 }
 
 void loop() {
-  if (Serial.available()) {
-    String line = Serial.readStringUntil('\n');
+  if (footholdFile && footholdFile.available()) {
+    String line = footholdFile.readStringUntil('\n');
     line.trim();
 
     int commaIndex = line.indexOf(',');
-    if (commaIndex > 0) {
+    if (commaIndex > 0 && commaIndex < line.length() - 1) {
       int x = line.substring(0, commaIndex).toInt();
       int y = line.substring(commaIndex + 1).toInt();
 
       sendGe(x, y);
       delay(delayTime);
-    } else {
-      Serial.print("Invalid format: ");
-      Serial.println(line);
     }
+  } else {
+    footholdFile.close();
+    while (true);
   }
 }
 
