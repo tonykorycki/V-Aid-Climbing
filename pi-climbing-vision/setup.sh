@@ -10,7 +10,7 @@ sudo apt install -y python3-pip python3-venv python3-opencv libopencv-dev
 sudo apt install -y python3-picamera2  # Pi Camera support
 
 # Create and activate virtual environment
-python3 -m venv .venv
+python3 -m venv .venv --system-site-packages
 echo "Creating virtual environment..."
 source .venv/bin/activate
 
