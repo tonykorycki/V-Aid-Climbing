@@ -1,3 +1,5 @@
+#change in this code is auto brightness based on HSV (Hue, Saturation, and value/brightness of color)
+
 import os
 import sys
 import requests
@@ -19,47 +21,6 @@ from io import BytesIO
 # YOLO + COLOR-BASED HOLD/Volume DETECTION WITH GRID MAPPING
 ##############################################################################
 
-#New Wall Area Function
-def detect_wall_area(image):
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-    edges = cv2.Canny(blurred, 50, 150)
-    kernel = np.ones((5, 5), np.uint8)
-    dilated = cv2.dilate(edges, kernel, iterations=2)
-    contours, _ = cv2.findContours(dilated, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-    if not contours:
-        height, width = image.shape[:2]
-        return np.ones((height, width), dtype=np.uint8), (0, 0, width, height)
-
-    largest_contour = max(contours, key=cv2.contourArea)
-    image_area = image.shape[0] * image.shape[1]
-    contour_area = cv2.contourArea(largest_contour)
-
-    if contour_area < 0.1 * image_area:
-        height, width = image.shape[:2]
-        lines = cv2.HoughLinesP(edges, 1, np.pi/180, threshold=100, minLineLength=100, maxLineGap=10)
-        if lines is not None:
-            line_image = np.zeros((height, width), dtype=np.uint8)
-            for line in lines:
-                x1, y1, x2, y2 = line[0]
-                cv2.line(line_image, (x1, y1), (x2, y2), 255, 2)
-            line_image = cv2.dilate(line_image, kernel, iterations=2)
-            line_contours, _ = cv2.findContours(line_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-            if line_contours:
-                largest_contour = max(line_contours, key=cv2.contourArea)
-
-    mask = np.zeros_like(gray)
-    cv2.drawContours(mask, [largest_contour], 0, 255, -1)
-    x, y, w, h = cv2.boundingRect(largest_contour)
-
-    padding = 20
-    x = max(0, x - padding)
-    y = max(0, y - padding)
-    w = min(image.shape[1] - x, w + 2*padding)
-    h = min(image.shape[0] - y, h + 2*padding)
-
-    return mask, (x, y, w, h)
 
 def detect_and_classify_holds(image_path,
                               target_color='red',
@@ -87,13 +48,6 @@ def detect_and_classify_holds(image_path,
         raise ValueError(f"Failed to load image at {image_path}")
     orig_h, orig_w = image.shape[:2]
 
-    # Step 1: Detect wall area to isolate from background
-    wall_mask, wall_region = detect_wall_area(image)
-    x_wall, y_wall, w_wall, h_wall = wall_region
-
-    # Crop image to wall area for further processing
-    wall_image = image[y_wall:y_wall+h_wall, x_wall:x_wall+w_wall]
-
     # Load YOLO model
     try:
         yolo_model = YOLO(yolo_model_path)
@@ -102,7 +56,7 @@ def detect_and_classify_holds(image_path,
         return [], np.zeros((12, 12), dtype=np.int32), image, image, (0, 0, orig_w, orig_h)
 
     # Run YOLO on the image (adjust confidence threshold if needed)
-    results = yolo_model.predict(source=wall_image, conf=0.25)
+    results = yolo_model.predict(source=image, conf=0.25)
     if len(results) == 0 or len(results[0].boxes) == 0:
         print("No holds detected by YOLO.")
         return [], np.zeros((12, 12), dtype=np.int32), image, image, (0, 0, orig_w, orig_h)
@@ -150,10 +104,6 @@ def detect_and_classify_holds(image_path,
         # Extract bounding box coordinates (x1, y1, x2, y2)
         x1, y1, x2, y2 = box.xyxy[0].tolist()
         x1, y1, x2, y2 = map(int, [x1, y1, x2, y2])
-        x1 += x_wall
-        y1 += y_wall
-        x2 += x_wall
-        y2 += y_wall
         box_area = (x2 - x1) * (y2 - y1)
         if box_area < min_area:
             continue
