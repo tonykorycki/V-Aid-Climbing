@@ -1,44 +1,60 @@
 #include <SoftwareSerial.h>
+#include <SD.h>
 
-SoftwareSerial mySerial(10, 11); //Assuming we're using pins 10 and 11 for Arduino data transfer
-//Also I need to optimise this code after actually seeing what was done on the Arduino side.
+SoftwareSerial mySerial(10, 11);
 
-const int numFootholds = 3; //We need to dynamically input footholds
-const int footholds[numFootholds][2] = {{10, 20}, {30, 40}, {50, 60}}; //Coordinates in X Y Format
-const int delayTime = 1000; 
+const int chipSelect = 4;
+const int delayTime = 1000;
+
+File footholdFile;
 
 void setup() {
   mySerial.begin(9600);
   Serial.begin(9600);
   Serial.println("Scanning Now");
+
+  if (!SD.begin(chipSelect)) {
+    Serial.println("SD card initialization failed!");
+    return;
+  }
+
+  footholdFile = SD.open("foothold.txt");
+  if (!footholdFile) {
+    Serial.println("Error opening foothold.txt");
+    return;
+  }
 }
 
 void loop() {
-  for (int x = 0; x < numFootholds; x++) {
-    int x = footholds[x][0];
-    int y = footholds[x][1];
-    
-    sendG(x, y);
-    
-    delay(delayTime); // Optional Delay Added
-  } 
-  //Function will stop after detecting all footholds, can be changed to continue processing additional input information from Arduino
+  if (footholdFile && footholdFile.available()) {
+    String line = footholdFile.readStringUntil('\n');
+    line.trim();
+
+    int commaIndex = line.indexOf(',');
+    if (commaIndex > 0 && commaIndex < line.length() - 1) {
+      int x = line.substring(0, commaIndex).toInt();
+      int y = line.substring(commaIndex + 1).toInt();
+
+      sendGe(x, y);
+      delay(delayTime);
+    }
+  } else {
+    footholdFile.close();
+    while (true);
+  }
 }
 
 void sendGe(int x, int y) {
-
   mySerial.print("G1 X");
   mySerial.print(x);
   mySerial.print(" Y");
   mySerial.println(y);
-  
-  // Provide feedback to the serial monitor
-  Serial.print("The sent X coord through Gcode is: ");
 
+  Serial.print("The sent X coord through Gcode is: ");
   Serial.print(x);
   Serial.print(" Y");
   Serial.println(y);
 }
+
 int main() {
-  
 }
