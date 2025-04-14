@@ -1,5 +1,7 @@
-from typing import List, Tuple
+from typing import List, Dict, Tuple
 import numpy as np
+import matplotlib.pyplot as plt
+import cv2
 
 def create_grid_map(holds_info: List[dict], grid_size: Tuple[int, int] = (12, 12)) -> np.ndarray:
     """
@@ -30,6 +32,42 @@ def create_grid_map(holds_info: List[dict], grid_size: Tuple[int, int] = (12, 12
 
     return grid_map
 
+def fill_grid_points_by_shape(grid_map, grid_x, grid_y, points_to_fill, bbox, crop_region, cell_width, cell_height):
+    """
+    Fill grid points based on hold shape and orientation.
+    
+    Args:
+        grid_map: 12x12 numpy array to fill
+        grid_x, grid_y: Grid coordinates
+        points_to_fill: 1 for hold, 2 for volume
+        bbox: Bounding box coordinates
+        crop_region: Crop region coordinates
+        cell_width, cell_height: Dimensions of grid cells
+    """
+    # Place center point
+    grid_map[grid_y, grid_x] = points_to_fill
+    
+    # For volumes, add a second point based on orientation
+    if points_to_fill == 2:
+        x1, y1, x2, y2 = bbox
+        box_width = x2 - x1
+        box_height = y2 - y1
+        
+        # Decide offset direction based on orientation
+        if box_width >= box_height:
+            # Horizontal: try to offset to the left; if not available, go right.
+            second_x = grid_x - 1 if grid_x > 0 else grid_x + 1
+            second_y = grid_y
+        else:
+            # Vertical: try to offset upward; if not available, go downward.
+            second_y = grid_y - 1 if grid_y > 0 else grid_y + 1
+            second_x = grid_x
+        
+        # Make sure the second point is within grid bounds
+        second_x = max(0, min(11, second_x))
+        second_y = max(0, min(11, second_y))
+        grid_map[second_y, second_x] = points_to_fill
+
 def filter_isolated_holds(holds_info: List[dict], threshold: float) -> List[dict]:
     """
     Filter out holds that are isolated based on a distance threshold.
@@ -54,3 +92,159 @@ def filter_isolated_holds(holds_info: List[dict], threshold: float) -> List[dict
             filtered_holds.append(hold)
     
     return filtered_holds
+
+def filter_isolated_volumes(holds_info, threshold):
+    """
+    Remove volumes that don't have any holds nearby.
+    
+    Args:
+        holds_info: List of hold dictionaries
+        threshold: Distance threshold
+        
+    Returns:
+        Filtered list of holds
+    """
+    filtered = []
+    for i, hold in enumerate(holds_info):
+        if hold["type"] == "volume":
+            cx, cy = hold["position"]
+            has_neighbor = False
+            for j, other in enumerate(holds_info):
+                if i == j:
+                    continue
+                ox, oy = other["position"]
+                dist = np.sqrt((cx - ox) ** 2 + (cy - oy) ** 2)
+                if dist < threshold:
+                    has_neighbor = True
+                    break
+            if has_neighbor:
+                filtered.append(hold)
+        else:
+            filtered.append(hold)
+    return filtered
+
+def visualize_grid_map(grid_map, title="Route Grid Map", complexity_metrics=None):
+    """
+    Create a visualization of the route grid map.
+    
+    Args:
+        grid_map: 12x12 numpy array
+        title: Plot title
+        complexity_metrics: Optional metrics dictionary
+        
+    Returns:
+        Matplotlib figure
+    """
+    fig = plt.figure(figsize=(8, 8))
+    cmap = plt.cm.Blues
+    plt.imshow(grid_map, cmap=cmap, interpolation='nearest')
+    
+    # Draw grid lines
+    plt.grid(True, color='gray', linestyle='-', linewidth=0.5)
+    for i in range(grid_map.shape[0] + 1):
+        plt.axhline(y=i - 0.5, color='gray', linestyle='-', linewidth=0.5)
+    for i in range(grid_map.shape[1] + 1):
+        plt.axvline(x=i - 0.5, color='gray', linestyle='-', linewidth=0.5)
+    
+    # Write cell values
+    for i in range(grid_map.shape[0]):
+        for j in range(grid_map.shape[1]):
+            if grid_map[i, j] > 0:
+                plt.text(j, i, str(grid_map[i, j]),
+                         ha="center", va="center",
+                         color="white" if grid_map[i, j] > 1 else "black")
+    
+    plt.title(title)
+    
+    # Add complexity metrics if provided
+    if complexity_metrics:
+        info_text = f"Density: {complexity_metrics['density']:.2f}, " \
+                   f"Holds: {complexity_metrics['num_holds']}, " \
+                   f"Volumes: {complexity_metrics['num_volumes']}"
+        plt.figtext(0.5, 0.01, info_text, ha="center", fontsize=9)
+    
+    plt.tight_layout()
+    return fig
+
+def create_route_visualization(image_path, holds_info, grid_map, result_image, masked_image, 
+                              cropped_region, predicted_difficulty=None):
+    """
+    Create a comprehensive visualization of the detected route.
+    
+    Args:
+        image_path: Path to original image
+        holds_info: List of hold dictionaries
+        grid_map: 12x12 numpy array
+        result_image: Annotated image
+        masked_image: Image with only detected holds
+        cropped_region: Crop region coordinates
+        predicted_difficulty: Optional difficulty prediction
+        
+    Returns:
+        Matplotlib figure
+    """
+    # Read original image
+    original_image = cv2.imread(image_path)
+    x, y, w, h = cropped_region
+    cropped_image = original_image[y:y+h, x:x+w]
+    
+    # Calculate complexity metrics
+    from utils.detection import analyze_route_complexity
+    complexity_metrics = analyze_route_complexity(grid_map)
+    
+    # Create visualization
+    fig = plt.figure(figsize=(15, 10))
+    
+    plt.subplot(2, 3, 1)
+    plt.title("Original Image")
+    plt.imshow(cv2.cvtColor(original_image, cv2.COLOR_BGR2RGB))
+    
+    plt.subplot(2, 3, 2)
+    plt.title("Detected Holds")
+    plt.imshow(cv2.cvtColor(result_image, cv2.COLOR_BGR2RGB))
+    
+    plt.subplot(2, 3, 3)
+    plt.title("Masked Holds")
+    plt.imshow(cv2.cvtColor(masked_image, cv2.COLOR_BGR2RGB))
+    
+    plt.subplot(2, 3, 4)
+    plt.title("Cropped Region")
+    plt.imshow(cv2.cvtColor(cropped_image, cv2.COLOR_BGR2RGB))
+    
+    plt.subplot(2, 3, 5)
+    plt.title("Grid Map")
+    plt.imshow(grid_map, cmap='Blues', interpolation='nearest')
+    # Draw grid lines and cell values
+    plt.grid(True, color='gray', linestyle='-', linewidth=0.5)
+    for i in range(grid_map.shape[0] + 1):
+        plt.axhline(y=i - 0.5, color='gray', linestyle='-', linewidth=0.5)
+    for i in range(grid_map.shape[1] + 1):
+        plt.axvline(x=i - 0.5, color='gray', linestyle='-', linewidth=0.5)
+    for i in range(grid_map.shape[0]):
+        for j in range(grid_map.shape[1]):
+            if grid_map[i, j] > 0:
+                plt.text(j, i, str(grid_map[i, j]),
+                        ha="center", va="center",
+                        color="white" if grid_map[i, j] > 1 else "black")
+    
+    plt.subplot(2, 3, 6)
+    plt.title("Route Metrics")
+    plt.axis('off')
+    
+    info_text = ""
+    if predicted_difficulty:
+        info_text += f"Predicted Difficulty: {predicted_difficulty}\n\n"
+    
+    info_text += f"Hold Count: {complexity_metrics['num_holds']}\n"
+    info_text += f"Volume Count: {complexity_metrics['num_volumes']}\n"
+    info_text += f"Density: {complexity_metrics['density']:.2f}\n"
+    info_text += f"Avg Distance: {complexity_metrics['avg_distance']:.2f}\n"
+    info_text += f"Max Vertical Gap: {complexity_metrics['max_vertical_gap']}"
+    
+    plt.text(0.5, 0.5, info_text, 
+             ha='center', va='center', 
+             fontsize=11, 
+             transform=plt.gca().transAxes)
+    
+    plt.tight_layout()
+    return fig
