@@ -1,30 +1,71 @@
-const int buttonPin = 2;  // Connect your button to digital pin 2
-int lastButtonState = HIGH;
-unsigned long lastDebounceTime = 0;
-unsigned long debounceDelay = 50;
+// Pins
+const int buttonNext = 2;
+const int buttonPrev = 3;
+const int ledR = 9;
+const int ledG = 10;
+const int ledB = 11;
 
-String colors[] = {"RED", "GREEN", "BLUE", "YELLOW", "ORANGE", "PURPLE", "PINK", "WHITE", "BLACK"};
-int colorIndex = 0;
+// Color definitions (R, G, B)
+const char* colors[] = {"red", "green", "blue", "yellow", "orange", "purple", "white", "pink"};
+int colorValues[][3] = {
+  {255, 0, 0},     // red
+  {0, 255, 0},     // green
+  {0, 0, 255},     // blue
+  {255, 255, 0},   // yellow
+  {255, 165, 0},   // orange (approx)
+  {128, 0, 128},   // purple
+  {255, 255, 255}, // white
+  {255, 105, 180}  // pink (hot pink)
+};
+
+const int numColors = sizeof(colors) / sizeof(colors[0]);
+int currentColor = 0;
+
+// Button states
+bool lastNextState = HIGH;
+bool lastPrevState = HIGH;
 
 void setup() {
-  pinMode(buttonPin, INPUT_PULLUP); // Use internal pull-up resistor
+  pinMode(buttonNext, INPUT_PULLUP);
+  pinMode(buttonPrev, INPUT_PULLUP);
+  pinMode(ledR, OUTPUT);
+  pinMode(ledG, OUTPUT);
+  pinMode(ledB, OUTPUT);
   Serial.begin(115200);
-  delay(2000); // Give GRBL host time to connect
-  Serial.println("COLOR:RED"); // Default color
+  updateLED();
 }
 
 void loop() {
-  int reading = digitalRead(buttonPin);
+  bool nextPressed = digitalRead(buttonNext) == LOW;
+  bool prevPressed = digitalRead(buttonPrev) == LOW;
 
-  if (reading != lastButtonState) {
-    lastDebounceTime = millis();
+  // Cycle forward
+  if (nextPressed && !lastNextState) {
+    currentColor = (currentColor + 1) % numColors;
+    updateLED();
+    delay(200);
   }
 
-  if ((millis() - lastDebounceTime) > debounceDelay && reading == LOW && lastButtonState == HIGH) {
-    colorIndex = (colorIndex + 1) % (sizeof(colors) / sizeof(colors[0]));
-    Serial.print("COLOR:");
-    Serial.println(colors[colorIndex]);
+  // Cycle backward
+  if (prevPressed && !lastPrevState) {
+    currentColor = (currentColor - 1 + numColors) % numColors;
+    updateLED();
+    delay(200);
   }
 
-  lastButtonState = reading;
+  // Confirm selection if both buttons are pressed
+  if (nextPressed && prevPressed) {
+    Serial.print("$COLOR=");
+    Serial.println(colors[currentColor]);
+    delay(1000);  // Wait to avoid multiple triggers
+  }
+
+  lastNextState = nextPressed;
+  lastPrevState = prevPressed;
+}
+
+void updateLED() {
+  analogWrite(ledR, colorValues[currentColor][0]);
+  analogWrite(ledG, colorValues[currentColor][1]);
+  analogWrite(ledB, colorValues[currentColor][2]);
 }
