@@ -22,7 +22,7 @@ def detect_and_classify_holds(image_path,
                               target_color='red',
                               sensitivity=25,
                               min_area=200,
-                              yolo_model_path="computer-vision/train4/weights/best.pt"):
+                              yolo_model_path="computer_vision/train4/weights/best.pt"):
     """
     Uses a YOLO model to detect objects. For each detected bounding box:
       - If the predicted class is “volume” (or if it’s a hold but very large), then we mark it as volume.
@@ -391,13 +391,13 @@ def save_results(image_path, holds_info, grid_map, result_image, masked_image, c
     return txt_path
 
 def main():
-    output_dir = "computer-vision/results"
+    output_dir = "computer_vision/results"
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
     print("=" * 50)
     print("CLIMBING ROUTE ANALYZER (YOLO + Color Check + Grid Mapping)")
     print("=" * 50)
-    default_img = "computer-vision/climbing_wall.jpg"
+    default_img = "computer_vision/climbing_wall.jpg"
     image_path = input(f"Enter path to image (default: {default_img}): ").strip()
     if not image_path:
         image_path = default_img
@@ -411,10 +411,10 @@ def main():
     sensitivity = max(0, min(100, sensitivity))
     min_area_str = input("Enter minimum area to consider as a hold (default: 200): ").strip()
     min_area = int(min_area_str) if min_area_str.isdigit() else 200
-    print("\nEnter YOLO model path (default: computer-vision/train4/weights/best.pt):")
+    print("\nEnter YOLO model path (default: computer_vision/train4/weights/best.pt):")
     yolo_model_path = input().strip()
     if not yolo_model_path:
-        yolo_model_path = "computer-vision/train4/weights/best.pt"
+        yolo_model_path = "computer_vision/train4/weights/best.pt"
     use_model = input("Use difficulty prediction model? (y/n, default: y): ").strip().lower() != 'n'
     model = None
     if use_model:

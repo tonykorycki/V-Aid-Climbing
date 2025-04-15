@@ -89,13 +89,6 @@ def detect_and_classify_holds(image_path,
     
     orig_h, orig_w = image.shape[:2]
 
-    # Step 1: Detect wall area to isolate from background
-    wall_mask, wall_region = detect_wall_area(image)
-    x_wall, y_wall, w_wall, h_wall = wall_region
-
-    # Crop image to wall area for further processing
-    wall_image = image[y_wall:y_wall+h_wall, x_wall:x_wall+w_wall]
-
     # Load YOLO model
     try:
         yolo_model = YOLO(yolo_model_path)
@@ -103,8 +96,8 @@ def detect_and_classify_holds(image_path,
         print(f"Error loading YOLO model: {e}")
         return [], np.zeros((12, 12), dtype=np.int32), image, image, (0, 0, orig_w, orig_h)
 
-    # Run YOLO on the image
-    results = yolo_model.predict(source=wall_image, conf=0.25)
+    # Run YOLO on the full image (no wall cropping)
+    results = yolo_model.predict(source=image, conf=0.25)
     if len(results) == 0 or len(results[0].boxes) == 0:
         print("No holds detected by YOLO.")
         return [], np.zeros((12, 12), dtype=np.int32), image, image, (0, 0, orig_w, orig_h)
@@ -152,12 +145,6 @@ def detect_and_classify_holds(image_path,
         # Extract bounding box coordinates (x1, y1, x2, y2)
         x1, y1, x2, y2 = box.xyxy[0].tolist()
         x1, y1, x2, y2 = map(int, [x1, y1, x2, y2])
-        
-        # Adjust coordinates to account for wall cropping
-        x1 += x_wall
-        y1 += y_wall
-        x2 += x_wall
-        y2 += y_wall
         
         box_area = (x2 - x1) * (y2 - y1)
         if box_area < min_area:

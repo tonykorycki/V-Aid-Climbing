@@ -74,7 +74,12 @@ results/  # Ignore the results directory
 *.csv
 *.txt
 
-
+# ML models and large directories
+ML-hold-detection/yolov5/
+ML-hold-detection/*/weights/
+**/weights/*.pt
+**/train*/weights/
+**/runs/
 
 # OS specific
 .DS_Store

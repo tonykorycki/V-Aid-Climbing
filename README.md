@@ -1,35 +1,18 @@
-# Raspberry Pi Climbing Vision Project
+This project provides computer vision tools to analyze climbing routes by detecting holds, mapping them onto a grid, and generating natural language descriptions. The system uses YOLO object detection to identify climbing holds and volumes, and optionally a Language Model (LLM) to describe the routes.
 
-This project is designed to analyze climbing routes using computer vision techniques on a Raspberry Pi 5. It utilizes a YOLO model for detecting holds and volumes in climbing wall images, maps these holds onto a grid, and generates descriptive information using a hosted LLM API on Hugging Face.
+The project has two main components:
+1. **Pi-Climbing-Vision**: Optimized version for Raspberry Pi devices
+2. **Computer Vision Scripts**: Can be run on any computer with Python support
 
-## Project Structure
+## Pi-Climbing-Vision
 
-```
-pi-climbing-vision
-├── src
-│   ├── pi_API_test.py          # Main test script for image processing and LLM integration
-│   ├── utils
-│   │   ├── camera_helper.py     # Functions for camera setup and image capture
-│   │   ├── detection.py         # YOLO detection functions for holds and volumes
-│   │   ├── grid_mapping.py      # Functions for mapping holds onto a grid
-│   │   └── llm_client.py        # Functions for communicating with the LLM API
-│   ├── config.py                # Configuration settings for paths and API endpoints
-│   └── models
-│       └── train4/weights/best.pt # YOLO model weights
-├── data
-│   ├── images                   # Directory for test images
-│   └── results                  # Directory for processed results
-├── requirements.txt             # List of required Python packages
-├── setup.sh                     # Setup script with virtual environment
-└── activate.sh                  # Script to activate the virtual environment
-```
+### Setup Instructions
 
-## Setup Instructions
-
-1. **Clone the repository** to your Raspberry Pi:
+1. **Clone the repository**:
    ```bash
    git clone https://github.com/tonykorycki/V-Aid-Climbing.git
    cd V-Aid-Climbing/pi-climbing-vision
+   ```
 
 2. **Get a Hugging Face API token**:
    - Create an account at [huggingface.co](https://huggingface.co)
@@ -37,7 +20,7 @@ pi-climbing-vision
    - Create a new token with "read" permissions
    - Update the token in config.py
 
-3. **Run the setup script** to install dependencies in a virtual environment:
+3. **Run the setup script** to create a virtual environment and install dependencies:
    ```bash
    chmod +x setup.sh
    ./setup.sh
@@ -47,7 +30,7 @@ pi-climbing-vision
    - Add test images to `data/images/` directory
    - OR ensure your Pi Camera or USB webcam is connected
 
-## Running the Program
+### Running the Program
 
 1. **Activate the virtual environment**:
    ```bash
@@ -61,28 +44,18 @@ pi-climbing-vision
 
 3. **Run the main program**:
    ```bash
-   python src/pi_API_test.py
+   python src/pi_CV_main.py  # Full featured version
+   # OR
+   python src/pi_API_test.py  # Simplified API test version
    ```
 
-4. **Interact with prompts**:
+4. **Follow the interactive prompts** to:
    - Choose between camera or saved images
-   - Select whether to use custom settings
-   - Choose the color of holds to detect
-   - Decide if you want the description read aloud
+   - Select hold colors to detect
+   - Configure sensitivity and detection parameters
+   - Generate and optionally hear route descriptions
 
-5. **View results** in the `data/results` directory
-
-## Interactive Options
-
-The program offers several interactive choices:
-
-- **Image Source**: Camera capture or images from directory
-- **Camera Type**: Pi Camera or USB webcam (if available)
-- **Custom Settings**: Adjust sensitivity, color detection, and minimum hold area
-- **Color Selection**: Choose from red, blue, green, yellow, orange, purple, black, or white
-- **Display Options**: Show detection results and read descriptions aloud
-
-## Requirements
+### Requirements
 
 - Raspberry Pi 5 (recommended) or Pi 4 with at least 4GB RAM
 - Pi Camera or USB webcam (optional for new captures)
@@ -90,19 +63,89 @@ The program offers several interactive choices:
 - Python 3.7+
 - Virtual environment (created by setup.sh)
 
-## Performance Notes
+### Performance Notes
 
 - YOLO detection takes 10-30 seconds per image on a Raspberry Pi 5
-- The Pi may heat up during intensive processing - cooling is recommended
+- The Pi may heat up during processing - cooling is recommended
 - Lower resolution images will process faster
 
----
+## Computer Vision Scripts
 
-To check the API token is working, run:
-```bash
-python src/test_api.py
-```
+You can also run the analysis on a regular computer (not just Raspberry Pi) using the scripts in the computer_vision directory.
 
-For optimal performance, update the model URL in config.py to:
-```python
-LLM_API_URL = "https://api-inference.huggingface.co/models/HuggingFaceH4/zephyr-7b-beta"
+### Setup for Computer
+
+1. Install required Python packages:
+   ```bash
+   pip install numpy opencv-python matplotlib torch ultralytics pillow requests huggingface_hub pyttsx3
+   ```
+
+2. (Optional) For local LLM functionality:
+   ```bash
+   pip install llama-cpp-python huggingface_hub
+   ```
+
+### Running the Computer Scripts
+
+You can use any of these three main scripts:
+
+- **CV_type2.py**: Main script with auto-brightness adjustment and LLM integration
+  ```bash
+  python computer_vision/CV_type2.py
+  ```
+
+- **CV-ML-2.py**: Version with machine learning difficulty prediction
+  ```bash
+  python computer_vision/CV-ML-2.py
+  ```
+
+- **CV_LLM_integration.py**: Optimized version with better LLM integration
+  ```bash
+  python computer_vision/CV_LLM_integration.py
+  ```
+
+### Setting Up Local LLM
+
+To use the local LLM functionality (instead of API):
+
+1. When prompted during script execution, choose "y" when asked to install llama-cpp-python and huggingface_hub
+
+2. The script will guide you to select a model from available GGUF models (Llama 2 variants)
+
+3. The model will be downloaded (may be several GB) and tested
+
+4. For subsequent runs, the script will use the downloaded model
+
+5. Select "local" when asked to use local LLM or API
+
+## Features
+
+- **Color Detection**: Isolate holds of a specific color (red, blue, green, yellow, etc.)
+- **Hold Classification**: Detect and classify both small holds and larger volumes
+- **Grid Mapping**: Convert detected holds to a 12x12 grid representation
+- **Route Description**: Generate natural language descriptions of the climbing route
+- **Text-to-Speech**: Option to have the route description read aloud
+- **Visualization**: Various visualization options for detection results
+
+## Output
+
+The system produces several outputs:
+- Annotated images showing detected holds
+- Grid maps representing the climbing route
+- Text descriptions of the route generated by the LLM
+- CSV files with grid mapping data
+- Text files with details about each detected hold
+
+## Advanced Configuration
+
+- To optimize performance on Raspberry Pi, adjust the YOLO model path in config.py
+- For improved LLM responses, you can try different models in config.py:
+  ```python
+  LLM_API_URL = "https://api-inference.huggingface.co/models/HuggingFaceH4/zephyr-7b-beta"
+  ```
+
+## Troubleshooting
+
+- If camera detection fails, ensure your camera permissions are set correctly
+- For memory issues on Raspberry Pi, try reducing image resolution in config.py
+- If LLM responses are slow, consider using the API option instead of local models
