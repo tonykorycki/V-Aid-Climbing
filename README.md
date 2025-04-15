@@ -1,3 +1,5 @@
+# Raspberry Pi Computer Vision Project for visually impaired climbers
+
 This project provides computer vision tools to analyze climbing routes by detecting holds, mapping them onto a grid, and generating natural language descriptions. The system uses YOLO object detection to identify climbing holds and volumes, and optionally a Language Model (LLM) to describe the routes.
 
 The project has two main components:
