@@ -14,6 +14,15 @@ import torch
 from ultralytics import YOLO
 from PIL import Image
 from io import BytesIO
+#needed import for buttons
+import serial
+import time
+
+grbl_serial = serial.Serial('/dev/ttyUSB0', 115200, timeout=1)
+time.sleep(2)
+grbl_serial.write(b"\r\n\r\n")  # Wake up GRBL
+time.sleep(2)
+grbl_serial.flushInput()
 
 ##############################################################################
 # YOLO + COLOR-BASED HOLD/Volume DETECTION WITH GRID MAPPING
