@@ -4,8 +4,6 @@ import requests
 import json
 from typing import List, Dict, Tuple, Optional
 import numpy as np
-import serial
-import time
 
 import cv2
 import numpy as np
@@ -20,19 +18,6 @@ from io import BytesIO
 ##############################################################################
 # YOLO + COLOR-BASED HOLD/Volume DETECTION WITH GRID MAPPING
 ##############################################################################
-
-# Replace with your actual port
-grbl_serial = serial.Serial('/dev/ttyUSB0', 115200, timeout=1)
-time.sleep(2)
-grbl_serial.write(b"\r\n\r\n")  # Wake up GRBL
-time.sleep(2)
-grbl_serial.flushInput()
-
-def send_gcode(x, y):
-  command = f"G1 X{x:.2f} Y{y:.2f}\n"
-  grbl_serial.write(command.encode())
-  print(f"Sent: {command.strip()}")
-  time.sleep(1)  # pause for move to complete
 
 
 def detect_and_classify_holds(image_path,
@@ -224,7 +209,7 @@ def detect_and_classify_holds(image_path,
                                   cell_width, cell_height)
         hold["relative_position"] = (rel_x, rel_y)
         hold["grid_position"] = (grid_x, grid_y)
-
+    
     # Filter out volumes that are too isolated
     volume_threshold = 0.05 * min(orig_w, orig_h)  # e.g., 10% of the smaller image dimension
     holds_info = filter_isolated_volumes(holds_info, volume_threshold)
@@ -904,13 +889,14 @@ def main():
     if not image_path:
         image_path = default_img
     
-    # Color selection
-    color_options = ["red", "blue", "green", "yellow", "orange", "purple", "black", "white",'pink']
-    print("\nAvailable colors:", ", ".join(color_options))
-    target_color = input("Enter color to detect (default: red): ").strip().lower()
-    if not target_color or target_color not in color_options:
-        target_color = "purple"
-    
+    # Color selection via Arduino
+    print("Waiting for color selection from Arduino...")
+    while True:
+        if grbl_serial.in_waiting:
+            target_color = grbl_serial.readline().decode().strip().lower()
+            print(f"Using color: {target_color}")
+            break
+
     # Detection parameters
     sensitivity_str = input("Enter sensitivity level (0-100, leave blank for auto): ").strip()
 
@@ -973,23 +959,7 @@ def main():
     if model and len(holds_info) > 0:
         predicted_difficulty = predict_route_difficulty(model, grid_map)
         print(f"\nPredicted route difficulty: {predicted_difficulty}")
-        
-    # OpenCV image shape (needed for scaling)
-    original_image = cv2.imread(image_path)
-    orig_h, orig_w = original_image.shape[:2]
     
-    # Define CNC machine dimensions in mm
-    X_MAX = 200  # Example value — adjust for your setup
-    Y_MAX = 200
-    
-    # Send each hold to GRBL
-    for hold in holds_info:
-        cx, cy = hold['position']
-        cnc_x = (cx / orig_w) * X_MAX
-        cnc_y = (cy / orig_h) * Y_MAX
-        send_gcode(cnc_x, cnc_y)
-
-
     print(f"\nDetected {len(holds_info)} holds:")
     for i, hold in enumerate(holds_info):
         print(f"Hold {i+1}: {hold['type']} at grid {hold['grid_position']} (Points: {hold['points_value']})")
