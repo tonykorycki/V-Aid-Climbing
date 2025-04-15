@@ -898,13 +898,16 @@ def main():
     if not image_path:
         image_path = default_img
     
-    # Color selection via Arduino
-    print("Waiting for color selection from Arduino...")
+# Wait for GRBL-style color selection like `$COLOR=red`
+    print("Waiting for GRBL-style color command from Arduino...")
+    target_color = None
     while True:
         if grbl_serial.in_waiting:
-            target_color = grbl_serial.readline().decode().strip().lower()
-            print(f"Using color: {target_color}")
-            break
+            line = grbl_serial.readline().decode().strip()
+            if line.startswith("$COLOR="):
+                target_color = line.split("=")[1]
+                print(f"Selected color: {target_color}")
+                break
 
     # Detection parameters
     sensitivity_str = input("Enter sensitivity level (0-100, leave blank for auto): ").strip()
