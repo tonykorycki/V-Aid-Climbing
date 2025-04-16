@@ -1,0 +1,71 @@
+// Pins
+const int buttonNext = 2;
+const int buttonPrev = 3;
+const int ledR = 9;
+const int ledG = 10;
+const int ledB = 11;
+
+// Color definitions (R, G, B)
+const char* colors[] = {"red", "green", "blue", "yellow", "orange", "purple", "white", "pink"};
+int colorValues[][3] = {
+  {255, 0, 0},     // red
+  {0, 255, 0},     // green
+  {0, 0, 255},     // blue
+  {255, 255, 0},   // yellow
+  {255, 165, 0},   // orange (approx)
+  {128, 0, 128},   // purple
+  {255, 255, 255}, // white
+  {255, 105, 180}  // pink (hot pink)
+};
+
+const int numColors = sizeof(colors) / sizeof(colors[0]);
+int currentColor = 0;
+
+// Button states
+bool lastNextState = HIGH;
+bool lastPrevState = HIGH;
+
+void setup() {
+  pinMode(buttonNext, INPUT_PULLUP);
+  pinMode(buttonPrev, INPUT_PULLUP);
+  pinMode(ledR, OUTPUT);
+  pinMode(ledG, OUTPUT);
+  pinMode(ledB, OUTPUT);
+  Serial.begin(115200);
+  updateLED();
+}
+
+void loop() {
+  bool nextPressed = digitalRead(buttonNext) == LOW;
+  bool prevPressed = digitalRead(buttonPrev) == LOW;
+
+  // Cycle forward
+  if (nextPressed && !lastNextState) {
+    currentColor = (currentColor + 1) % numColors;
+    updateLED();
+    delay(200);
+  }
+
+  // Cycle backward
+  if (prevPressed && !lastPrevState) {
+    currentColor = (currentColor - 1 + numColors) % numColors;
+    updateLED();
+    delay(200);
+  }
+
+  // Confirm selection if both buttons are pressed
+  if (nextPressed && prevPressed) {
+    Serial.print("$COLOR=");
+    Serial.println(colors[currentColor]);
+    delay(1000);  // Wait to avoid multiple triggers
+  }
+
+  lastNextState = nextPressed;
+  lastPrevState = prevPressed;
+}
+
+void updateLED() {
+  analogWrite(ledR, colorValues[currentColor][0]);
+  analogWrite(ledG, colorValues[currentColor][1]);
+  analogWrite(ledB, colorValues[currentColor][2]);
+}
