@@ -66,13 +66,27 @@ env/
 *.swp
 *.swo
 
-# Project specific
-results/  # Ignore the results directory
+# Project specific - images and data files
 *.jpg
 *.jpeg
 *.png
 *.csv
 *.txt
+
+# EXCEPTIONS - explicitly include these sample images
+!computer_vision/climbing_wall.jpg
+!computer_vision/demo_images/*.jpg
+!computer_vision/demo_images/*.png
+!pi-climbing-vision/data/images/*.jpg
+!pi-climbing-vision/data/images/*.png
+
+# Explicitly exclude results and training directories
+computer_vision/results/
+computer_vision/train*/
+ML-hold-detection/*/train*/
+pi-climbing-vision/data/results/
+pi-climbing-vision/src/models/train*/
+**/runs/
 
 # ML models and large directories
 ML-hold-detection/yolov5/
