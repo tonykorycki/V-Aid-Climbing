@@ -3,7 +3,7 @@ import time
 import pyttsx3
 import serial
 import RPi.GPIO as GPIO
-from config import YOLO_MODEL_PATH, IMAGE_DIR, RESULTS_DIR, LLM_API_URL
+from paths import YOLO_MODEL_PATH, IMAGE_DIR, RESULTS_DIR, LLM_API_URL
 from utils.camera_helper import setup_camera, capture_image
 from utils.detection import detect_and_classify_holds
 from utils.grid_mapping import create_route_visualization

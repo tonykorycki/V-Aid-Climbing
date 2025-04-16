@@ -9,7 +9,7 @@ from utils.detection import detect_and_classify_holds, analyze_route_complexity
 from utils.grid_mapping import visualize_grid_map, create_route_visualization
 from utils.llm_client import generate_route_description
 from utils.camera_helper import setup_camera, capture_image
-from config import YOLO_MODEL_PATH, IMAGE_DIR, RESULTS_DIR, LLM_API_URL, USE_PI_CAMERA, RESOLUTION
+from paths import YOLO_MODEL_PATH, IMAGE_DIR, RESULTS_DIR, LLM_API_URL, USE_PI_CAMERA, RESOLUTION
 
 def show_visualizations_non_blocking(image_path, holds_info, grid_map, result_image, masked_image, 
                                     cropped_region, predicted_difficulty=None):

@@ -1,5 +1,5 @@
 import requests
-from config import HF_API_TOKEN, LLM_API_URL
+from paths import HF_API_TOKEN, LLM_API_URL
 
 def test_api_connection():
     headers = {
