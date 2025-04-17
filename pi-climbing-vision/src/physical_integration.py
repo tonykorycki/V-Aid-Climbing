@@ -83,46 +83,17 @@ def select_from_options(engine, options, prompt):
         time.sleep(0.1)  # Small delay for debouncing and CPU usage
 
 # Convert grid to GCODE
-def grid_to_gcode(grid_map, bed_size_x=200, bed_size_y=200):
-    """Convert 12x12 grid to GCODE for tactile representation"""
-    gcode = []
-    
-    # Start with homing
-    gcode.append("G28 ; Home all axes")
-    
-    # Calculate cell size
-    cell_width = bed_size_x / 12
-    cell_height = bed_size_y / 12
-    
-    # Add header
-    gcode.append("M107 ; Turn off fan")
-    gcode.append("G90 ; Absolute positioning")
-    gcode.append("M83 ; Relative extruder mode")
-    
-    # Move through each cell in the grid
-    for y in range(12):
-        for x in range(12):
-            # Calculate center position of this cell
-            pos_x = (x + 0.5) * cell_width
-            pos_y = (y + 0.5) * cell_height
-            
-            # Move to position
-            gcode.append(f"G0 X{pos_x:.2f} Y{pos_y:.2f} F3000 ; Move to cell ({x},{y})")
-            
-            # If there's a hold at this position, activate the actuator
-            if grid_map[11-y][x] > 0:  # Note: Grid is inverted, bottom is y=11
-                # Different heights based on hold size (1=small, 2=large)
-                height = 5 if grid_map[11-y][x] == 1 else 10
-                gcode.append(f"M280 P0 S{90+height} ; Raise pin to {height}mm")
-                gcode.append("G4 P500 ; Wait 500ms")
-                gcode.append("M280 P0 S90 ; Lower pin")
-                gcode.append("G4 P200 ; Wait 200ms")
-    
-    # Return to origin when done
-    gcode.append("G0 X0 Y0 F3000 ; Return to origin")
-    
-    return "\n".join(gcode)
+def grid_to_gcode(grid_map, grid_width=12, grid_height=12):
+    lines = []
 
+    for y in range(grid_height):
+        for x in range(grid_width):
+            # Remember: grid is bottom-up (0 at bottom), so invert y
+            if grid_map[grid_height - 1 - y][x] > 0:
+                lines.append(f"{x},{y}")
+
+    return "\n".join(lines)
+    
 # Send GCODE to Arduino
 def send_gcode_to_arduino(gcode, engine):
     try:
