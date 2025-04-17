@@ -14,8 +14,9 @@ CYCLE_BUTTON_PIN = 17  # GPIO pin for cycling through options
 SELECT_BUTTON_PIN = 27  # GPIO pin for selecting options
 
 # Arduino serial connection
-ARDUINO_PORT = '/dev/ttyACM0'  # Default Arduino port, may need adjustment
+ARDUINO_PORT = '/dev/ttyUSB0'  # Adjust as necessary for your setup
 ARDUINO_BAUD = 115200
+time.sleep(2)  # Allow time for Arduino to reset
 
 # Initialize text-to-speech engine
 def init_speech():
