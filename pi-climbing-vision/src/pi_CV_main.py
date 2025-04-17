@@ -119,7 +119,7 @@ def main():
     # Set default values
     target_color = 'purple'  # Default color
     sensitivity = None       # Will be auto-calculated based on image brightness
-    min_area = 200           # Default minimum area
+    min_area = 30           # Default minimum area
     
     # Process image source (camera or file)
     if use_camera:

@@ -21,7 +21,7 @@ from io import BytesIO
 def detect_and_classify_holds(image_path,
                               target_color='red',
                               sensitivity=25,
-                              min_area=200,
+                              min_area=30,
                               yolo_model_path="computer_vision/train4/weights/best.pt"):
     """
     Uses a YOLO model to detect objects. For each detected bounding box:
@@ -409,8 +409,8 @@ def main():
     sensitivity_str = input("Enter sensitivity level (0-100, default: 25): ").strip()
     sensitivity = int(sensitivity_str) if sensitivity_str.isdigit() else 25
     sensitivity = max(0, min(100, sensitivity))
-    min_area_str = input("Enter minimum area to consider as a hold (default: 200): ").strip()
-    min_area = int(min_area_str) if min_area_str.isdigit() else 200
+    min_area_str = input("Enter minimum area to consider as a hold (default: 30): ").strip()
+    min_area = int(min_area_str) if min_area_str.isdigit() else 30
     print("\nEnter YOLO model path (default: computer_vision/train4/weights/best.pt):")
     yolo_model_path = input().strip()
     if not yolo_model_path:

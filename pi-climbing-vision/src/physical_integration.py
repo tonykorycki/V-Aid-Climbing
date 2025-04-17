@@ -27,6 +27,9 @@ def init_speech():
 # GPIO setup
 def setup_gpio():
     GPIO.setmode(GPIO.BCM)
+    # You can use either PUD_UP or PUD_DOWN depending on your hardware setup
+    # With PUD_UP: Button press = LOW, Released = HIGH
+    # With PUD_DOWN: Button press = HIGH, Released = LOW
     GPIO.setup(CYCLE_BUTTON_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
     GPIO.setup(SELECT_BUTTON_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
@@ -45,7 +48,7 @@ def speak(engine, text):
     engine.say(text)
     engine.runAndWait()
 
-# Cycle through options with audio feedback
+# Cycle through options with audio feedback - improved with state tracking
 def select_from_options(engine, options, prompt):
     speak(engine, prompt)
     current_index = 0
@@ -53,20 +56,30 @@ def select_from_options(engine, options, prompt):
     # Announce first option
     speak(engine, f"Option: {options[current_index]}")
     
+    # Button state tracking to avoid multiple triggers per press
+    last_cycle_state = False  # For PUD_UP: False means not pressed
+    last_select_state = False # For PUD_UP: False means not pressed
+    
     while True:
-        # Cycle button pressed
-        if GPIO.input(CYCLE_BUTTON_PIN) == GPIO.LOW:
-            wait_for_button_press(CYCLE_BUTTON_PIN)
+        # With PUD_UP, we need to invert the logic (LOW/False = pressed)
+        cycle_pressed = not GPIO.input(CYCLE_BUTTON_PIN)  # LOW (0) means pressed with PUD_UP
+        select_pressed = not GPIO.input(SELECT_BUTTON_PIN) # LOW (0) means pressed with PUD_UP
+        
+        # Detect new press of cycle button (transition from not pressed to pressed)
+        if cycle_pressed and not last_cycle_state:
             current_index = (current_index + 1) % len(options)
             speak(engine, f"Option: {options[current_index]}")
         
-        # Select button pressed
-        if GPIO.input(SELECT_BUTTON_PIN) == GPIO.LOW:
-            wait_for_button_press(SELECT_BUTTON_PIN)
+        # Detect new press of select button (transition from not pressed to pressed)
+        if select_pressed and not last_select_state:
             speak(engine, f"Selected: {options[current_index]}")
             return options[current_index]
         
-        time.sleep(0.1)
+        # Update last states
+        last_cycle_state = cycle_pressed
+        last_select_state = select_pressed
+        
+        time.sleep(0.1)  # Small delay for debouncing and CPU usage
 
 # Convert grid to GCODE
 def grid_to_gcode(grid_map, bed_size_x=200, bed_size_y=200):
