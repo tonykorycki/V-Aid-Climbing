@@ -126,7 +126,32 @@ def grid_to_gcode(grid_map, bed_size_x=200, bed_size_y=200):
 # Send GCODE to Arduino
 def send_gcode_to_arduino(gcode, engine):
     try:
-        with serial.Serial(ARDUINO_PORT, ARDUINO_BAUD, timeout=10) as ser:
+        # Try to detect Arduino port automatically
+        common_ports = ['/dev/ttyUSB0', '/dev/ttyACM0']
+        
+        # Try to detect Arduino port
+        detected_port = None
+        for port in common_ports:
+            try:
+                with serial.Serial(port, 115200, timeout=1) as ser:
+                    detected_port = port
+                    print(f"Arduino detected on {port}")
+                    break
+            except:
+                pass
+        
+        if detected_port:
+            arduino_port = detected_port
+
+        else:
+            print("No Arduino automatically detected.")
+            port = input(f"Enter Arduino port (default: {ARDUINO_PORT}): ").strip()
+            if port:
+                arduino_port = port
+            else:
+                arduino_port = ARDUINO_PORT
+
+        with serial.Serial(arduino_port, ARDUINO_BAUD, timeout=10) as ser:
             speak(engine, "Connecting to tactile display...")
             time.sleep(2)  # Allow time for Arduino to initialize
             
