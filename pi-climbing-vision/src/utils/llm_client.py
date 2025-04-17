@@ -2,6 +2,7 @@ import requests
 import json
 import numpy as np
 from typing import Dict, Optional
+from paths import HF_API_TOKEN  # <-- Add this import
 
 def generate_route_description(grid_map: np.ndarray, 
                                difficulty: Optional[str] = None, 
@@ -88,7 +89,10 @@ Keep your response under 200 words and focus on being practical and helpful. [/I
     
     elif api_url:
         try:
-            headers = {"Content-Type": "application/json"}
+            headers = {
+                "Authorization": f"Bearer {HF_API_TOKEN}",  # <-- Add this line
+                "Content-Type": "application/json"
+            }
             payload = {
                 "prompt": prompt,
                 "max_tokens": 300,
