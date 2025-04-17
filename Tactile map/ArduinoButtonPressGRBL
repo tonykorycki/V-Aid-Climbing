@@ -1,71 +1,87 @@
-// Pins
-const int buttonNext = 2;
-const int buttonPrev = 3;
-const int ledR = 9;
-const int ledG = 10;
-const int ledB = 11;
+// Pin setup
+const int buttonNextPin = 2;
+const int buttonPrevPin = 3;
 
-// Color definitions (R, G, B)
-const char* colors[] = {"red", "green", "blue", "yellow", "orange", "purple", "white", "pink"};
-int colorValues[][3] = {
-  {255, 0, 0},     // red
-  {0, 255, 0},     // green
-  {0, 0, 255},     // blue
-  {255, 255, 0},   // yellow
-  {255, 165, 0},   // orange (approx)
-  {128, 0, 128},   // purple
-  {255, 255, 255}, // white
-  {255, 105, 180}  // pink (hot pink)
-};
+const int redPin = 9;
+const int greenPin = 10;
+const int bluePin = 11;
 
-const int numColors = sizeof(colors) / sizeof(colors[0]);
-int currentColor = 0;
+String colors[] = {"red", "blue", "green", "yellow", "orange", "purple", "black", "white", "pink"};
+int currentColorIndex = 0;
 
-// Button states
-bool lastNextState = HIGH;
-bool lastPrevState = HIGH;
+unsigned long lastDebounce = 0;
+const unsigned long debounceDelay = 250;
 
 void setup() {
-  pinMode(buttonNext, INPUT_PULLUP);
-  pinMode(buttonPrev, INPUT_PULLUP);
-  pinMode(ledR, OUTPUT);
-  pinMode(ledG, OUTPUT);
-  pinMode(ledB, OUTPUT);
+  pinMode(buttonNextPin, INPUT_PULLUP);
+  pinMode(buttonPrevPin, INPUT_PULLUP);
+  
+  pinMode(redPin, OUTPUT);
+  pinMode(greenPin, OUTPUT);
+  pinMode(bluePin, OUTPUT);
+
   Serial.begin(115200);
+  delay(1000);
+  Serial.println("Ready");
   updateLED();
 }
 
 void loop() {
-  bool nextPressed = digitalRead(buttonNext) == LOW;
-  bool prevPressed = digitalRead(buttonPrev) == LOW;
+  // Debounce
+  if (millis() - lastDebounce > debounceDelay) {
+    bool nextPressed = digitalRead(buttonNextPin) == LOW;
+    bool prevPressed = digitalRead(buttonPrevPin) == LOW;
 
-  // Cycle forward
-  if (nextPressed && !lastNextState) {
-    currentColor = (currentColor + 1) % numColors;
-    updateLED();
-    delay(200);
+    if (nextPressed && prevPressed) {
+      // Both buttons pressed = CONFIRM COLOR
+      Serial.print("$COLOR=");
+      Serial.println(colors[currentColorIndex]);
+      delay(500); // Delay for confirmation feedback
+    } else if (nextPressed) {
+      currentColorIndex = (currentColorIndex + 1) % (sizeof(colors)/sizeof(colors[0]));
+      Serial.println("$NEXT");
+      updateLED();
+      lastDebounce = millis();
+    } else if (prevPressed) {
+      currentColorIndex = (currentColorIndex - 1 + (sizeof(colors)/sizeof(colors[0]))) % (sizeof(colors)/sizeof(colors[0]));
+      Serial.println("$PREV");
+      updateLED();
+      lastDebounce = millis();
+    }
   }
 
-  // Cycle backward
-  if (prevPressed && !lastPrevState) {
-    currentColor = (currentColor - 1 + numColors) % numColors;
-    updateLED();
-    delay(200);
+  // Listen for color command from Python
+  if (Serial.available()) {
+    String input = Serial.readStringUntil('\n');
+    input.trim();
+    if (input.startsWith("$COLOR=")) {
+      String color = input.substring(7);
+      for (int i = 0; i < sizeof(colors)/sizeof(colors[0]); i++) {
+        if (color == colors[i]) {
+          currentColorIndex = i;
+          updateLED();
+          break;
+        }
+      }
+    }
   }
-
-  // Confirm selection if both buttons are pressed
-  if (nextPressed && prevPressed) {
-    Serial.print("$COLOR=");
-    Serial.println(colors[currentColor]);
-    delay(1000);  // Wait to avoid multiple triggers
-  }
-
-  lastNextState = nextPressed;
-  lastPrevState = prevPressed;
 }
 
 void updateLED() {
-  analogWrite(ledR, colorValues[currentColor][0]);
-  analogWrite(ledG, colorValues[currentColor][1]);
-  analogWrite(ledB, colorValues[currentColor][2]);
+  String color = colors[currentColorIndex];
+  if (color == "red") setLED(255, 0, 0);
+  else if (color == "blue") setLED(0, 0, 255);
+  else if (color == "green") setLED(0, 255, 0);
+  else if (color == "yellow") setLED(255, 255, 0);
+  else if (color == "orange") setLED(255, 165, 0);
+  else if (color == "purple") setLED(128, 0, 128);
+  else if (color == "black") setLED(0, 0, 0);
+  else if (color == "white") setLED(255, 255, 255);
+  else if (color == "pink") setLED(255, 105, 180);
+}
+
+void setLED(int r, int g, int b) {
+  analogWrite(redPin, r);
+  analogWrite(greenPin, g);
+  analogWrite(bluePin, b);
 }
