@@ -88,20 +88,31 @@ Keep your response under 200 words and focus on being practical and helpful. [/I
             return generate_generic_description(grid_map, difficulty)
     
     elif api_url:
+        # Prepare the API request
+        headers = {
+            "Authorization": f"Bearer {HF_API_TOKEN}",
+            "Content-Type": "application/json"
+        }
+        
+        payload = {
+            "inputs": prompt,
+            "parameters": {
+                "max_new_tokens": 300,
+                "temperature": 0.7,
+                "return_full_text": False
+            }
+        }
+        
+        # Send request to the API
         try:
-            headers = {
-                "Authorization": f"Bearer {HF_API_TOKEN}",  # <-- Add this line
-                "Content-Type": "application/json"
-            }
-            payload = {
-                "prompt": prompt,
-                "max_tokens": 300,
-                "temperature": 0.7
-            }
+            print(f"Sending request to Mistral API...")
+            response = requests.post(api_url, headers=headers, json=payload)
             
-            response = requests.post(api_url, headers=headers, data=json.dumps(payload), timeout=10)
             if response.status_code == 200:
-                return response.json().get("text", "").strip() or generate_generic_description(grid_map, difficulty)
+                result = response.json()
+                if isinstance(result, list) and len(result) > 0:
+                    return result[0].get("generated_text", "No text generated")
+                return str(result)
             else:
                 print(f"API error: {response.status_code} - {response.text}")
                 return generate_generic_description(grid_map, difficulty)
@@ -109,9 +120,9 @@ Keep your response under 200 words and focus on being practical and helpful. [/I
         except Exception as e:
             print(f"Error using API LLM: {e}")
             return generate_generic_description(grid_map, difficulty)
-    
     else:
         return generate_generic_description(grid_map, difficulty)
+    
 
 def generate_generic_description(grid_map: np.ndarray, difficulty: Optional[str] = None) -> str:
     """
