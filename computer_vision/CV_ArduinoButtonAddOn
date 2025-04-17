@@ -18,6 +18,7 @@ from io import BytesIO
 import serial
 import time
 
+
 grbl_serial = serial.Serial('/dev/ttyUSB0', 115200, timeout=1)
 time.sleep(2)
 grbl_serial.write(b"\r\n\r\n")  # Wake up GRBL
@@ -898,16 +899,35 @@ def main():
     if not image_path:
         image_path = default_img
     
-# Wait for GRBL-style color selection like `$COLOR=red`
-    print("Waiting for GRBL-style color command from Arduino...")
-    target_color = None
-    while True:
-        if grbl_serial.in_waiting:
-            line = grbl_serial.readline().decode().strip()
-            if line.startswith("$COLOR="):
-                target_color = line.split("=")[1]
-                print(f"Selected color: {target_color}")
+# 2-button LED color selector with GRBL-style messages
+color_options = ["red", "blue", "green", "yellow", "orange", "purple", "black", "white", "pink"]
+current_color_index = 0
+
+print("Waiting for Arduino button inputs...")
+
+while True:
+    if grbl_serial.in_waiting:
+        line = grbl_serial.readline().decode().strip()
+        
+        if line == "$NEXT":
+            current_color_index = (current_color_index + 1) % len(color_options)
+            selected = color_options[current_color_index]
+            print(f"Color changed to: {selected}")
+            grbl_serial.write(f"$COLOR={selected}\n".encode())  # Send to Arduino for LED update
+
+        elif line == "$PREV":
+            current_color_index = (current_color_index - 1) % len(color_options)
+            selected = color_options[current_color_index]
+            print(f"Color changed to: {selected}")
+            grbl_serial.write(f"$COLOR={selected}\n".encode())  # Send to Arduino for LED update
+
+        elif line.startswith("$COLOR="):
+            target_color = line.split("=")[1]
+            if target_color in color_options:
+                print(f"[CONFIRMED] Running detection for color: {target_color}")
                 break
+            else:
+                print(f"Invalid color: {target_color}")
 
     # Detection parameters
     sensitivity_str = input("Enter sensitivity level (0-100, leave blank for auto): ").strip()
