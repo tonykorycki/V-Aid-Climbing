@@ -83,6 +83,27 @@ def select_from_options(engine, options, prompt):
         time.sleep(0.1)  # Small delay for debouncing and CPU usage
 
 # Convert grid to GCODE
+'''
+def grid_to_gcode(grid_map, grid_width=12, grid_height=12):
+    """
+    Converts a grid_map to simple x,y,height lines for SD card use.
+
+    Each cell with a non-zero value will be written as 'x,y,height' where:
+    - x: column index
+    - y: row index (bottom row = 0)
+    - height: 5 if value==1 (small hold), 10 if value==2 (large hold)
+    """
+    lines = []
+
+    for y in range(grid_height):
+        for x in range(grid_width):
+            val = grid_map[grid_height - 1 - y][x]  # bottom = y=0
+            if val > 0:
+                height = 5 if val == 1 else 10
+                lines.append(f"{x},{y},{height}")
+
+    return "\n".join(lines)
+'''
 def grid_to_gcode(grid_map, grid_width=12, grid_height=12):
     lines = []
 
