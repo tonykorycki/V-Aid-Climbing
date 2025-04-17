@@ -2,6 +2,9 @@ from typing import List, Dict, Tuple, Optional
 import os
 import cv2
 import numpy as np
+import matplotlib
+# Configure matplotlib to use 'Agg' backend (no GUI)
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import threading
 import requests
@@ -11,52 +14,30 @@ from utils.llm_client import generate_route_description
 from utils.camera_helper import setup_camera, capture_image
 from paths import YOLO_MODEL_PATH, IMAGE_DIR, RESULTS_DIR, LLM_API_URL, USE_PI_CAMERA, RESOLUTION
 
-def show_visualizations_non_blocking(image_path, holds_info, grid_map, result_image, masked_image, 
-                                    cropped_region, predicted_difficulty=None):
+# Add a new function to display the grid in text mode in the terminal
+def display_text_grid(grid_map: np.ndarray):
     """
-    Display visualizations in a non-blocking way.
+    Display a text-based representation of the climbing route grid in the terminal.
     
     Args:
-        image_path: Path to the original image
-        holds_info: List of hold information dictionaries
         grid_map: 12x12 numpy array representing the route
-        result_image: Image with drawn bounding boxes
-        masked_image: Masked image showing only detected holds
-        cropped_region: (x, y, w, h) of the cropped region
-        predicted_difficulty: Optional predicted difficulty
     """
-    # Create visualization in a new thread
-    def show_viz():
-        try:
-            fig = create_route_visualization(
-                image_path=image_path,
-                holds_info=holds_info,
-                grid_map=grid_map,
-                result_image=result_image,
-                masked_image=masked_image,
-                cropped_region=cropped_region,
-                predicted_difficulty=predicted_difficulty
-            )
-            
-            plt.figure(fig.number)
-            plt.suptitle("Route Analysis - Press any key in the figure to close", fontsize=12)
-            plt.draw()
-            plt.pause(0.001)  # Small pause to ensure rendering
-            
-            # Block main thread until a key is pressed
-            key_press = plt.waitforbuttonpress()
-            plt.close(fig)
-            
-        except Exception as e:
-            print(f"Error displaying visualizations: {e}")
-            print("This might be due to running in a headless environment.")
+    print("\nRoute Grid Map (Text Representation):")
+    print("  " + "".join([f"{i:2d}" for i in range(grid_map.shape[1])]))
+    print("  " + "-" * (grid_map.shape[1] * 2))
     
-    # Start visualization in a separate thread so it doesn't block execution
-    viz_thread = threading.Thread(target=show_viz)
-    viz_thread.daemon = True  # Thread will exit when main program exits
-    viz_thread.start()
+    for i, row in enumerate(grid_map):
+        line = f"{i:2d}|"
+        for cell in row:
+            if cell == 0:
+                line += ". "  # Empty space
+            elif cell == 1:
+                line += "o "  # Small hold
+            elif cell == 2:
+                line += "O "  # Large hold
+        print(line)
     
-    # Don't wait for the thread to complete
+    print("\nLegend: '.' = Empty, 'o' = Small hold, 'O' = Large hold")
 
 def save_visualization(image_path, holds_info, grid_map, result_image, masked_image, 
                       cropped_region, predicted_difficulty=None, output_dir=None):
@@ -239,6 +220,9 @@ def main():
         print("No holds detected.")
         return
 
+    # Display text-based grid visualization in terminal
+    display_text_grid(grid_map)
+
     # Generate a description using the LLM API
     description = generate_route_description(grid_map, use_local_llm=False, api_url=LLM_API_URL)
     print("\nGenerated Route Description:")
@@ -271,20 +255,6 @@ def main():
             print("Install with: pip install pyttsx3")
         except Exception as e:
             print(f"Error reading aloud: {e}")
-
-    # Display visualizations in a non-blocking way if requested
-    show_image = input("Display detection results? (y/n, default: y): ").strip().lower() != 'n'
-    if show_image:
-        show_visualizations_non_blocking(
-            image_path=image_path,
-            holds_info=holds_info,
-            grid_map=grid_map,
-            result_image=result_image,
-            masked_image=masked_image,
-            cropped_region=cropped_region
-        )
-        print("Visualization window opened. Press any key in the figure to close it.")
-        print("The program will continue running.")
 
     # Ask if user wants to save the route description
     save_description = input("Save route description to a file? (y/n, default: y): ").strip().lower() != 'n'
