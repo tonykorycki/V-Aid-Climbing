@@ -161,9 +161,9 @@ def send_gcode_to_arduino(gcode, engine):
                     ser.write((line + '\n').encode())
                     # Wait for Arduino to process and respond with 'ok'
                     response = ser.readline().decode('utf-8').strip()
-                    while response != 'ok':
+                    ''''while response != 'ok':
                         response = ser.readline().decode('utf-8').strip()
-                        time.sleep(0.1)
+                        time.sleep(0.1)'''
             
             return True
     except Exception as e:
