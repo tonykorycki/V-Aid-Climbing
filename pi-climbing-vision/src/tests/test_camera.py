@@ -32,13 +32,30 @@ def setup_camera(use_picamera=True, resolution=RESOLUTION):
             '''
             ADDED AUTOFOCUS FEATURE AND TIMING FOR REFOCUS
             '''
-            cap = cv2.VideoCapture(0)
-            cap.set(cv2.CAP_PROP_AUTOFOCUS, 1)
-            for _ in range(10):
+            prev_brightness = None
+            stable_count = 0
+            max_checks = 30  # max frame tries
+            tolerance = 5    # brightness must stay within ±5 for stability
+
+            for _ in range(max_checks):
                 ret, frame = cap.read()
                 if not ret:
                     continue
-                cv2.waitKey(1000)
+
+                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                brightness = gray.mean()
+
+                if prev_brightness is not None and abs(brightness - prev_brightness) < tolerance:
+                    stable_count += 1
+                else:
+                    stable_count = 0  # reset if not stable
+
+                prev_brightness = brightness
+                if stable_count >= 5:  # require 5 consistent frames
+                    print("✅ Autofocus & brightness stabilized.")
+                    break
+
+                cv2.waitKey(100)  # wait between checks
             '''
             ADDED AUTOFOCUS FEATURE AND TIMING FOR REFOCUS
             '''
