@@ -52,7 +52,7 @@ def generate_absolute_gcode(grid):
                 gcode.append("G4 P0.5 ; Hold actuator")
                 gcode.append("M5 ; Deactivate actuator")
                 gcode.append("G0 Z0 F1000 ; Lower")
-                gcode.append("G4 P3 ; Wait 3 seconds before next")
+                gcode.append("G4 P1 ; Wait 3 seconds before next")
                 move_count += 1
 
     gcode.append("G0 X0 Y0 F3000 ; Return to origin")
@@ -63,7 +63,7 @@ def send_gcode(ser, gcode):
     """Send G-code to Arduino line-by-line, waiting for 'ok' after each command."""
     print("→ Flushing and waking Arduino...")
     ser.write(b"\r\n\r\n")  # Wake/reset GRBL or other firmware
-    time.sleep(1)
+    time.sleep(2)
     ser.flushInput()
 
     for line in gcode.split("\n"):
