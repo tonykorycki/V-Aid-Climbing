@@ -9,8 +9,8 @@ def test_tts():
         engine = pyttsx3.init()
         
         print("Setting speech properties...")
-        engine.setProperty('rate', 150)
-        engine.setProperty('volume', 0.9)
+        engine.setProperty('rate', 90)
+        engine.setProperty('volume', 1.0)
         
         print("Testing speech output:")
         
