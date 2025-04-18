@@ -15,7 +15,7 @@ def test_tts():
         print("Testing speech output:")
         
         # Test message
-        message = "This is a test of the text to speech system. If you can hear this message, your speech synthesis is working correctly."
+        message = "keep speaking and that dick is going into ahmad hassan from brooklyn"
         print(f"Speaking: '{message}'")
         
         engine.say(message)
