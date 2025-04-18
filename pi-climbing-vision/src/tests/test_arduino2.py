@@ -18,7 +18,7 @@ ARDUINO_PORT = '/dev/ttyUSB0'
 ARDUINO_BAUD = 115200
 
 def generate_test_grid():
-    """ Generate a 12x12 grid with ~3 '1's and 2 '2's """
+    """Generate a 12x12 grid with ~3 '1's and 2 '2's placed randomly."""
     grid = np.zeros((GRID_HEIGHT, GRID_WIDTH), dtype=int)
     ones = random.sample(range(GRID_HEIGHT * GRID_WIDTH), 3)
     twos = random.sample([i for i in range(GRID_HEIGHT * GRID_WIDTH) if i not in ones], 2)
@@ -34,16 +34,15 @@ def generate_test_grid():
 
 def generate_relative_gcode(grid):
     """
-    Generate G-code using relative positioning to visit and actuate at all detected holds.
-    Movement is calculated based on a 12x12 grid with defined spacing. Holds marked as 1 or 2
-    will trigger actuator activation. After visiting all points, the tool returns to origin.
+    Generate G-code using relative positioning to move and actuate on all non-zero cells.
+    Still triggers actuator even if dx and dy are zero (i.e., repeated position).
     """
     gcode = [
         "G21 ; Set units to millimeters",
         "G91 ; Use relative positioning"
     ]
 
-    current_x, current_y = 0, 0  # Starting position in mm
+    current_x, current_y = 0, 0
 
     for y in range(GRID_HEIGHT):
         for x in range(GRID_WIDTH):
@@ -51,11 +50,14 @@ def generate_relative_gcode(grid):
             if val in [1, 2]:
                 target_x = x * GRID_SPACING
                 target_y = y * GRID_SPACING
-
                 dx = target_x - current_x
                 dy = target_y - current_y
 
-                gcode.append(f"G0 X{dx} Y{dy} F3000 ; Move to cell ({x},{y})")
+                if dx != 0 or dy != 0:
+                    gcode.append(f"G0 X{dx} Y{dy} F3000 ; Move to cell ({x},{y})")
+                else:
+                    gcode.append(f"; Already at cell ({x},{y}), no move needed")
+
                 gcode.append("M3 S255 ; Activate actuator")
                 gcode.append("G4 P0.5 ; Wait 0.5s")
                 gcode.append("M5 ; Deactivate actuator")
@@ -71,11 +73,15 @@ def generate_relative_gcode(grid):
     return "\n".join(gcode)
 
 def send_gcode(ser, gcode):
-    """ Send G-code line by line over serial """
+    """Send G-code to Arduino line by line with optional response delay."""
     for line in gcode.split("\n"):
         print(f"Sending: {line}")
         ser.write((line + "\n").encode())
         time.sleep(0.1)
+
+        # Optional: uncomment if your Arduino sends back 'ok'
+        # response = ser.readline().decode().strip()
+        # print("Arduino response:", response)
 
 def test_arduino_connection():
     print("==== Arduino Connection & G-code Test ====")
@@ -99,12 +105,15 @@ def test_arduino_connection():
 
     try:
         ser = serial.Serial(arduino_port, arduino_baud, timeout=1)
-        time.sleep(2)  # Wait for connection to stabilize
+        time.sleep(2)
         print("✓ Serial connection established!")
 
-        # Generate and send test G-code
+        # Generate grid and show what's active
         grid = generate_test_grid()
         print("Generated Test Grid:\n", grid)
+        print("Non-zero (active) positions:", np.argwhere(grid > 0))
+
+        # Generate G-code and send it
         gcode = generate_relative_gcode(grid)
         send_gcode(ser, gcode)
 
