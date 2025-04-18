@@ -14,6 +14,7 @@ def setup_camera(use_picamera=True, resolution=RESOLUTION):
     if use_picamera:
         try:
             from picamera2 import Picamera2
+            
             picam = Picamera2()
             config = picam.create_preview_configuration(main={"size": resolution})
             picam.configure(config)
