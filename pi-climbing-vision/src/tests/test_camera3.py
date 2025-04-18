@@ -4,13 +4,13 @@ import time
 import cv2
 import subprocess
 
-# Define constants
+# Constants
 RESULTS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'results'))
 RESOLUTION = (640, 480)
 
 def setup_camera(use_picamera=True, resolution=RESOLUTION):
     """
-    Set up PiCamera2 or USB camera with max sharpness autofocus logic.
+    Initialize PiCamera2 or fallback USB cam with extended warmup and autofocus.
     """
     if use_picamera:
         try:
@@ -20,10 +20,10 @@ def setup_camera(use_picamera=True, resolution=RESOLUTION):
             picam.configure(config)
             return picam
         except ImportError:
-            print("⚠️ PiCamera2 not found. Falling back to USB camera.")
+            print("⚠️ PiCamera2 not found. Using USB cam.")
             use_picamera = False
         except Exception as e:
-            print(f"⚠️ Error initializing PiCamera2: {e}")
+            print(f"⚠️ PiCamera2 error: {e}")
             use_picamera = False
 
     if not use_picamera:
@@ -32,59 +32,65 @@ def setup_camera(use_picamera=True, resolution=RESOLUTION):
             cap.set(cv2.CAP_PROP_FRAME_WIDTH, resolution[0])
             cap.set(cv2.CAP_PROP_FRAME_HEIGHT, resolution[1])
             cap.set(cv2.CAP_PROP_AUTOFOCUS, 1)
-            print("⏳ Warming up USB camera with extra frames...")
-            for _ in range(15):
+
+            print("⏳ USB warmup: 30 frames, slower pace for max stability...")
+            for _ in range(30):
                 ret, _ = cap.read()
-                time.sleep(0.3)  # Slower = more time to refocus
+                time.sleep(0.25)
+
             return cap
         except Exception as e:
-            print(f"❌ USB camera init failed: {e}")
+            print(f"❌ USB camera failed: {e}")
             return None
 
 def capture_image(camera, save_path="captured_image.jpg"):
     """
-    Capture a super sharp image from PiCamera2 or USB webcam.
+    Capture a super-sharp image from either PiCamera2 or USB cam.
     """
     try:
-        if hasattr(camera, 'capture_array'):  # PiCamera2 logic
+        if hasattr(camera, 'capture_array'):  # PiCamera2
             camera.start()
-            time.sleep(1.5)
+            time.sleep(2)
 
             print("🔍 Triggering PiCamera2 autofocus...")
-            camera.set_controls({"AfMode": 1})        # Continuous
-            time.sleep(0.2)
-            camera.set_controls({"AfTrigger": 0})     # Manual trigger
-            time.sleep(3.0)                            # Long delay to settle
+            camera.set_controls({"AfMode": 1})
+            time.sleep(0.5)
+            camera.set_controls({"AfTrigger": 0})
+            time.sleep(5.0)  # LONG focus settle time
 
-            # Optional: Debug autofocus state
+            # Optional debug
             metadata = camera.capture_metadata()
             print("📊 Autofocus metadata:", metadata)
 
-            # Lock autofocus
+            # Lock focus
             camera.set_controls({"AfMode": 0})
-            time.sleep(0.2)
+            time.sleep(0.5)
 
+            print("📸 Capturing ultra-sharp image...")
             camera.capture_file(save_path)
+            time.sleep(0.5)
             camera.stop()
-            print(f"✅ Image captured: {save_path}")
+
+            print(f"✅ Image saved: {save_path}")
             return save_path
 
-        else:  # OpenCV (USB) logic
-            print("🔍 USB autofocus settle phase...")
-            time.sleep(3.0)
+        else:  # USB cam
+            print("🔍 USB settle delay: 5s")
+            time.sleep(5)
 
-            # Discard extra frames before final capture
-            for _ in range(7):
+            print("📸 Discarding 15 pre-capture frames...")
+            for _ in range(15):
                 ret, _ = camera.read()
-                time.sleep(0.1)
+                time.sleep(0.15)
 
+            print("📸 Taking final sharp frame...")
             ret, frame = camera.read()
             if ret:
                 cv2.imwrite(save_path, frame)
-                print(f"✅ USB image captured: {save_path}")
+                print(f"✅ USB image saved: {save_path}")
                 return save_path
             else:
-                print("❌ USB capture failed")
+                print("❌ Failed to read frame.")
                 return None
 
     except Exception as e:
@@ -92,23 +98,22 @@ def capture_image(camera, save_path="captured_image.jpg"):
         return None
 
 def test_camera():
-    """Full autofocus + capture test."""
-    print("==== SUPER SHARP CAMERA TEST ====")
+    print("===== ULTRA SHARP CAMERA TEST =====")
 
     if not os.path.exists(RESULTS_DIR):
         os.makedirs(RESULTS_DIR)
-    print(f"🗂️ Results dir: {RESULTS_DIR} (Writable: {os.access(RESULTS_DIR, os.W_OK)})")
+    print(f"🗂️ Saving to: {RESULTS_DIR} (Writable: {os.access(RESULTS_DIR, os.W_OK)})")
 
     camera = setup_camera(use_picamera=True, resolution=RESOLUTION)
     if camera is None:
-        print("❌ No camera initialized.")
+        print("❌ Camera not initialized.")
         return
 
-    save_path = os.path.join(RESULTS_DIR, "max_sharpness_test.jpg")
+    save_path = os.path.join(RESULTS_DIR, "ultra_sharp_test.jpg")
     final_path = capture_image(camera, save_path)
 
     if final_path and os.path.exists(final_path):
-        print("✅ Sharp image saved successfully.")
+        print("✅ Ultra-sharp capture complete!")
     else:
         print("❌ Image capture failed.")
 
