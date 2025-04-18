@@ -2,10 +2,24 @@ import os
 import sys
 import time
 import cv2
+import subprocess
 
 # Define constants directly in this file instead of importing
 RESULTS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'results'))
 RESOLUTION = (640, 480)
+
+def trigger_autofocus():
+    """
+    Sends an I2C command to the ArduCam to trigger autofocus.
+    Works for ArduCam 16MP AF modules (like IMX519).
+    """
+    try:
+        # These values come from ArduCam's autofocus control spec
+        # The address 0x0c is the onboard AF driver, and 0x04 0x00 is the trigger command
+        subprocess.run(['i2cset', '-y', '11', '0x0c', '0x04', '0x00'], check=True)
+        print("✅ Autofocus triggered.")
+    except Exception as e:
+        print(f"❌ Failed to trigger autofocus: {e}")
 
 def setup_camera(use_picamera=True, resolution=RESOLUTION):
     """
@@ -89,6 +103,7 @@ def test_camera():
     print("\nTesting Pi Camera...")
     try:
         camera = setup_camera(use_picamera=True, resolution=RESOLUTION)
+        trigger_autofocus()
         
         if camera is None:
             print("❌ Pi Camera initialization failed")

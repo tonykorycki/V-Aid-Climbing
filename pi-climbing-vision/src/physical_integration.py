@@ -3,6 +3,7 @@ import time
 import pyttsx3
 import serial
 import RPi.GPIO as GPIO
+import threading
 from paths import YOLO_MODEL_PATH, IMAGE_DIR, RESULTS_DIR, LLM_API_URL
 from utils.camera_helper import setup_camera, capture_image
 from utils.detection import detect_and_classify_holds
@@ -50,10 +51,31 @@ def wait_for_button_press(pin):
     time.sleep(0.2)  # Debounce delay
 
 # Speak text and wait for completion
-def speak(engine, text):
+'''def speak(engine, text):
     print(text)  # For debugging
     engine.say(text)
-    engine.runAndWait()
+    engine.runAndWait()'''
+
+def speak(engine, text):
+    print(text)  # For debugging
+    speaking_done = threading.Event()
+
+    def speak_thread():
+        engine.say(text)
+        engine.runAndWait()
+        speaking_done.set()
+
+    t = threading.Thread(target=speak_thread)
+    t.start()
+
+    while not speaking_done.is_set():
+        if not GPIO.input(CYCLE_BUTTON_PIN):  # Button is pressed (PUD_UP logic)
+            print("Speech interrupted by cycle button.")
+            engine.stop()  # Stop speech
+            speaking_done.set()
+            break
+        time.sleep(0.05)
+
 
 # Cycle through options with audio feedback - improved with state tracking
 def select_from_options(engine, options, prompt):
@@ -287,7 +309,16 @@ def main():
         
         # Speak the description
         speak(engine, "Here is the description of the climbing route:")
+        speak(engine, "Press the cycle button to skip at any time.")
         speak(engine, description)
+
+        while True:
+            repeat = select_from_options(engine, ["Yes", "No"], 
+                                      "Would you like to hear the description again?")
+            if repeat == "Yes":
+                speak(engine, description)
+            else:
+                break
 
         # Completion
         speak(engine, "Analysis complete. Thank you for using the climbing route analyzer.")
