@@ -118,7 +118,7 @@ def test_camera():
                 time.sleep(1)  # Let camera warm up
 
                 print("🔍 Triggering autofocus...")
-                camera.set_controls({"AfMode": 2})        # Continuous autofocus mode
+                camera.set_controls({"AfMode": 1})        # Continuous autofocus mode
                 time.sleep(0.2)
                 camera.set_controls({"AfTrigger": 0})     # Trigger autofocus
                 time.sleep(0.2)
