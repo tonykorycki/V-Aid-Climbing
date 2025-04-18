@@ -45,7 +45,7 @@ def generate_relative_gcode(grid):
                 target_y = y * GRID_SPACING
                 dx = target_x - current_x
                 dy = target_y - current_y
-                gcode.append(f"G0 X{dx:.2f} Y{dy:.2f} F3000")
+                gcode.append(f"G0 X{dx} Y{dy} F3000")
                 gcode.append("M3 S255 ; Activate actuator")
                 gcode.append("G4 P0.5 ; Dwell 0.5s")
                 gcode.append("M5 ; Deactivate actuator")
@@ -56,7 +56,7 @@ def generate_relative_gcode(grid):
 
 def send_gcode(ser, gcode):
     """ Send G-code line by line over serial """
-    for line in gcode.splitlines():
+    for line in gcode.split("\n"):
         print(f"Sending: {line}")
         ser.write((line + "\n").encode())
         time.sleep(0.1)
@@ -82,17 +82,18 @@ def test_arduino_connection():
     print(f"Connecting to Arduino on {arduino_port} at {arduino_baud} baud...")
 
     try:
-        with serial.Serial(arduino_port, arduino_baud, timeout=5) as ser:
-            print("✓ Serial connection established!")
+        ser = serial.Serial(arduino_port, arduino_baud, timeout=1)
+        time.sleep(2)  # Wait for connection to stabilize
+        print("✓ Serial connection established!")
 
-            # Generate and send test G-code
-            grid = generate_test_grid()
-            print("Generated Test Grid:\n", grid)
-            gcode = generate_relative_gcode(grid)
-            send_gcode(ser, gcode)
+        # Generate and send test G-code
+        grid = generate_test_grid()
+        print("Generated Test Grid:\n", grid)
+        gcode = generate_relative_gcode(grid)
+        send_gcode(ser, gcode)
 
-            print("\n✓ G-code test complete!")
-            return True
+        print("\n✓ G-code test complete!")
+        return True
 
     except serial.SerialException as e:
         print(f"\n✗ Serial port error: {e}")
