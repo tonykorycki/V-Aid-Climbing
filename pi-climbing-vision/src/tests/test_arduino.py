@@ -105,20 +105,19 @@ def send_gcode(ser, gcode):
         ser.write((line + "\n").encode())
         
         # Skip comments when adding extra delay
-        if line.strip() and not line.strip().startswith(';'):
+        
             # Give more time for movement commands
-            if "G0" in line:
-                time.sleep(0.5)  # Extra delay for movement
-            else:
-                time.sleep(0.2)  # Normal delay for other commands
-                
-            # Flush buffer and wait for Arduino to process
-            ser.flush()
-            
-            # Optional: Read any response from Arduino
-            response = ser.readline().decode('utf-8', errors='ignore').strip()
-            if response:
-                print(f"Arduino says: {response}")
+        if "G0" in line or "G1" in line:
+            print("  Movement command - waiting 2 seconds...")
+            time.sleep(2.0)  # Much longer delay for movement
+        elif "M3" in line or "M5" in line:
+            print("  Actuator command - waiting 1 second...")
+            time.sleep(1.0)  # Longer delay for actuator
+        else:
+            print("  Standard command - waiting 0.5 seconds...")
+            time.sleep(0.5)  # Standard delay
+          
+        # Flush buffer and wait for Arduino to process
 
 def test_arduino_connection():
     print("==== Arduino Connection & G-code Test ====")
