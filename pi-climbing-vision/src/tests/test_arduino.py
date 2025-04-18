@@ -56,10 +56,15 @@ def generate_relative_gcode(grid):
 
 def generate_absolute_gcode(grid):
     """ Generate G-code using absolute positioning """
+    
+    # Reduce grid scaling if hitting boundaries
+    scaling_factor = 10  # Adjust this if needed (was GRID_SPACING)
+    
     gcode = [
         "G21 ; Set units to mm", 
         "G90 ; Absolute positioning",
-        "G0 X0 Y0 F3000 ; Home to origin"
+        "G0 X0 Y0 F1500 ; Home to origin",
+        "G4 P1 ; Dwell 1s to ensure we're at origin"
     ]
     
     # Find all cells with values 1 or 2
@@ -72,25 +77,48 @@ def generate_absolute_gcode(grid):
     print(f"Found {len(points)} active points in grid")
     
     # Visit each point
-    for x, y, val in points:
-        abs_x = x * GRID_SPACING
-        abs_y = y * GRID_SPACING
-        gcode.append(f"G0 X{abs_x} Y{abs_y} F3000 ; Move to point ({x},{y})")
+    for idx, (x, y, val) in enumerate(points):
+        abs_x = x * scaling_factor
+        abs_y = y * scaling_factor
+        gcode.append(f"; Moving to point {idx+1}/{len(points)}: ({x},{y}) - value: {val}")
+        gcode.append(f"G0 X{abs_x} Y{abs_y} F1500 ; Move to point")
+        gcode.append("G4 P1 ; Dwell 1s to ensure arrival")
         gcode.append("M3 S255 ; Activate actuator")
-        gcode.append("G4 P0.5 ; Dwell 0.5s")
+        gcode.append("G4 P2 ; Dwell 2s with actuator active")
         gcode.append("M5 ; Deactivate actuator")
+        gcode.append("G4 P1 ; Dwell 1s after deactivating")
     
-    # Return to origin
-    gcode.append("G0 X0 Y0 F3000 ; Return to origin")
+    # Return to origin with explicit command
+    gcode.append("; Returning to origin")
+    gcode.append("G0 X0 Y0 F1500 ; Move back to origin")
+    gcode.append("G4 P2 ; Dwell 2s at origin")
     
     return "\n".join(gcode)
 
 def send_gcode(ser, gcode):
-    """ Send G-code line by line over serial """
-    for line in gcode.split("\n"):
-        print(f"Sending: {line}")
+    """ Send G-code line by line over serial with longer delays """
+    lines = gcode.split("\n")
+    total_lines = len(lines)
+    
+    for i, line in enumerate(lines):
+        print(f"Sending ({i+1}/{total_lines}): {line}")
         ser.write((line + "\n").encode())
-        time.sleep(0.1)
+        
+        # Skip comments when adding extra delay
+        if line.strip() and not line.strip().startswith(';'):
+            # Give more time for movement commands
+            if "G0" in line:
+                time.sleep(0.5)  # Extra delay for movement
+            else:
+                time.sleep(0.2)  # Normal delay for other commands
+                
+            # Flush buffer and wait for Arduino to process
+            ser.flush()
+            
+            # Optional: Read any response from Arduino
+            response = ser.readline().decode('utf-8', errors='ignore').strip()
+            if response:
+                print(f"Arduino says: {response}")
 
 def test_arduino_connection():
     print("==== Arduino Connection & G-code Test ====")
