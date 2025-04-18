@@ -100,10 +100,32 @@ def test_camera():
             save_path = os.path.join(RESULTS_DIR, "test_pi_camera.jpg")
             try:
                 camera.start()
-                time.sleep(2)  # Give camera time to adjust
+                time.sleep(1)  # Let camera warm up
+
+                print("🔍 Triggering autofocus...")
+                camera.set_controls({"AfMode": 1})        # Continuous autofocus mode
+                time.sleep(0.2)
+                camera.set_controls({"AfTrigger": 0})     # Trigger autofocus
+                time.sleep(0.2)
+
+                # Wait until focus completes
+                focus_complete = False
+                for _ in range(15):  # Try for ~3 seconds
+                    metadata = camera.capture_metadata()
+                    af_state = metadata.get("AfState", -1)
+                    if af_state == 2:  # Focused
+                        print("✅ Autofocus complete.")
+                        focus_complete = True
+                        break
+                    time.sleep(0.2)
+
+                if not focus_complete:
+                    print("⚠️ Autofocus did not report success in time.")
+
+                # Capture image after focus settles
                 camera.capture_file(save_path)
                 camera.stop()
-                
+
                 if os.path.exists(save_path):
                     print(f"✅ Test image saved to: {save_path}")
                 else:
