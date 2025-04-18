@@ -54,40 +54,6 @@ def generate_relative_gcode(grid):
 
     return "\n".join(gcode)
 
-def generate_absolute_gcode(grid):
-    """ Generate G-code using absolute positioning """
-    gcode = [
-        "G21 ; Set units to mm", 
-        "G90 ; Absolute positioning",
-        "G0 X0 Y0 F3000 ; Home to origin",
-        "G4 P1 ; Dwell 0.5s"
-    ]
-    
-    # Find all cells with values 1 or 2
-    points = []
-    for y in range(GRID_HEIGHT):
-        for x in range(GRID_WIDTH):
-            if grid[y, x] in [1, 2]:
-                points.append((x, y, grid[y, x]))
-    
-    print(f"Found {len(points)} active points in grid")
-    
-    # Visit each point
-    for x, y, val in points:
-        abs_x = x * GRID_SPACING
-        abs_y = y * GRID_SPACING
-        gcode.append(f"G0 X{abs_x} Y{abs_y} F3000 ; Move to point ({x},{y})")
-        gcode.append("M3 S255 ; Activate actuator")
-        gcode.append("G4 P2 ; Dwell 0.5s")
-        gcode.append("M5 ; Deactivate actuator")
-        gcode.append("G4 P2 ; Dwell 0.5s")
-
-    
-    # Return to origin
-    gcode.append("G0 X0 Y0 F3000 ; Return to origin")
-    
-    return "\n".join(gcode)
-
 def send_gcode(ser, gcode):
     """ Send G-code line by line over serial """
     for line in gcode.split("\n"):
@@ -123,8 +89,7 @@ def test_arduino_connection():
         # Generate and send test G-code
         grid = generate_test_grid()
         print("Generated Test Grid:\n", grid)
-        # Use the new function here
-        gcode = generate_absolute_gcode(grid)
+        gcode = generate_relative_gcode(grid)
         send_gcode(ser, gcode)
 
         print("\n✓ G-code test complete!")
