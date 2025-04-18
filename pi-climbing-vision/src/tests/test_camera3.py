@@ -6,7 +6,7 @@ import subprocess
 
 # Constants
 RESULTS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'results'))
-RESOLUTION = (640, 480)
+RESOLUTION = (1080, 2560)
 
 def setup_camera(use_picamera=True, resolution=RESOLUTION):
     """
