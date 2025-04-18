@@ -63,7 +63,7 @@ def send_gcode(ser, gcode):
     """Send G-code to Arduino line-by-line, waiting for 'ok' after each command."""
     print("→ Flushing and waking Arduino...")
     ser.write(b"\r\n\r\n")  # Wake/reset GRBL or other firmware
-    time.sleep(2)
+    time.sleep(1)
     ser.flushInput()
 
     for line in gcode.split("\n"):
