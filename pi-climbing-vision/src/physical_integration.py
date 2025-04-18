@@ -22,6 +22,9 @@ GRID_WIDTH = 12
 GRID_HEIGHT = 12
 GRID_SPACING = 10  # mm
 
+stop_speaking = False
+
+
 
 time.sleep(2)  # Allow time for Arduino to reset
 
@@ -40,6 +43,8 @@ def setup_gpio():
     # With PUD_DOWN: Button press = HIGH, Released = LOW
     GPIO.setup(CYCLE_BUTTON_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
     GPIO.setup(SELECT_BUTTON_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+    GPIO.add_event_detect(CYCLE_BUTTON_PIN, GPIO.FALLING, callback=stop_tts_callback, bouncetime=300)
+
 
 # Wait for button press with debounce
 def wait_for_button_press(pin):
@@ -51,30 +56,28 @@ def wait_for_button_press(pin):
     time.sleep(0.2)  # Debounce delay
 
 # Speak text and wait for completion
-'''def speak(engine, text):
-    print(text)  # For debugging
-    engine.say(text)
-    engine.runAndWait()'''
-
 def speak(engine, text):
-    print(text)  # For debugging
-    speaking_done = threading.Event()
+    global stop_speaking
+    stop_speaking = False
 
-    def speak_thread():
+    def speak_and_check():
         engine.say(text)
         engine.runAndWait()
-        speaking_done.set()
 
-    t = threading.Thread(target=speak_thread)
+    t = threading.Thread(target=speak_and_check)
     t.start()
 
-    while not speaking_done.is_set():
-        if not GPIO.input(CYCLE_BUTTON_PIN):  # Button is pressed (PUD_UP logic)
-            print("Speech interrupted by cycle button.")
-            engine.stop()  # Stop speech
-            speaking_done.set()
+    while t.is_alive():
+        if stop_speaking:
+            engine.stop()
+            print("Speech interrupted.")
             break
         time.sleep(0.05)
+
+
+def stop_tts_callback(channel):
+    global stop_speaking
+    stop_speaking = True
 
 
 # Cycle through options with audio feedback - improved with state tracking
@@ -316,7 +319,7 @@ def main():
             repeat = select_from_options(engine, ["Yes", "No"], 
                                       "Would you like to hear the description again?")
             if repeat == "Yes":
-                speak(engine, description)
+                 speak(engine, description)
             else:
                 break
 
