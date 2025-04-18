@@ -15,7 +15,7 @@ def test_tts():
         print("Testing speech output:")
         
         # Test message
-        message = "keep speaking and that dick is going into ahmad hassan from brooklyn"
+        message = "These chicks don't even know the Name of my band, But they're all on me like they Wanna hold hands"
         print(f"Speaking: '{message}'")
         
         engine.say(message)
