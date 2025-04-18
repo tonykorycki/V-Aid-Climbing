@@ -28,8 +28,20 @@ def setup_camera(use_picamera=True, resolution=RESOLUTION):
             use_picamera = False
     
     if not use_picamera:
-        try:
+        try: 
+            '''
+            ADDED AUTOFOCUS FEATURE AND TIMING FOR REFOCUS
+            '''
             cap = cv2.VideoCapture(0)
+            cap.set(cv2.CAP_PROP_AUTOFOCUS, 1)
+            for _ in range(10):
+                ret, frame = cap.read()
+                if not ret:
+                    continue
+                cv2.waitKey(100)
+            '''
+            ADDED AUTOFOCUS FEATURE AND TIMING FOR REFOCUS
+            '''
             if not cap.isOpened():
                 print("Failed to open USB camera")
                 return None
