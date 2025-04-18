@@ -31,9 +31,9 @@ def generate_test_grid():
     return grid
 
 def generate_absolute_gcode(grid):
-    """Generate absolute-positioning G-code with Z-lift and 3-second delay between actions."""
+    """Generate absolute G-code with 5 actuator pushes, Z-lift, and 3s delay between each."""
     gcode = [
-        "G21 ; Use mm",
+        "G21 ; Use millimeters",
         "G90 ; Absolute positioning"
     ]
 
@@ -47,27 +47,42 @@ def generate_absolute_gcode(grid):
                 pos_y = y * GRID_SPACING
 
                 gcode.append(f"G0 X{pos_x} Y{pos_y} F3000 ; Move to ({x},{y})")
-                gcode.append("G0 Z5 F1000 ; Lift for emphasis")
+                gcode.append("G0 Z5 F1000 ; Lift")
                 gcode.append("M3 S255 ; Activate actuator")
                 gcode.append("G4 P0.5 ; Hold actuator")
                 gcode.append("M5 ; Deactivate actuator")
                 gcode.append("G0 Z0 F1000 ; Lower")
                 gcode.append("G4 P3 ; Wait 3 seconds before next")
-
                 move_count += 1
 
     gcode.append("G0 X0 Y0 F3000 ; Return to origin")
+    assert move_count == 5, f"Expected 5 actuator pushes, got {move_count}"
     return "\n".join(gcode)
 
 def send_gcode(ser, gcode):
-    """Send G-code line by line to Arduino."""
+    """Send G-code to Arduino line-by-line, waiting for 'ok' after each command."""
+    print("→ Flushing and waking Arduino...")
+    ser.write(b"\r\n\r\n")  # Wake/reset GRBL or other firmware
+    time.sleep(2)
+    ser.flushInput()
+
     for line in gcode.split("\n"):
+        line = line.strip()
+        if not line:
+            continue
+
         print(f"Sending: {line}")
         ser.write((line + "\n").encode())
-        time.sleep(0.1)
+
+        while True:
+            response = ser.readline().decode().strip().lower()
+            if response == "ok":
+                break
+            elif response:
+                print(f"  ↳ Arduino response: {response}")
 
 def test_arduino_connection():
-    print("==== Arduino G-code Test: 5 Moves + Pushes w/ Z + Delay ====")
+    print("==== Arduino G-code Test: 5 Unique Moves + Pushes w/ Z Lift and Delay ====")
 
     grid = generate_test_grid()
     print("Generated Grid:\n", grid)
@@ -78,13 +93,14 @@ def test_arduino_connection():
     gcode = generate_absolute_gcode(grid)
 
     try:
+        print(f"Connecting to Arduino on {ARDUINO_PORT} at {ARDUINO_BAUD} baud...")
         ser = serial.Serial(ARDUINO_PORT, ARDUINO_BAUD, timeout=1)
         time.sleep(2)
-        print(f"✓ Connected to Arduino on {ARDUINO_PORT} at {ARDUINO_BAUD} baud.")
+        print(f"✓ Serial connection established.")
         send_gcode(ser, gcode)
-        print("\n✅ G-code complete. All 5 moves, pushes, and delays sent.")
+        print("\n✅ G-code complete. All 5 moves, pushes, and waits sent successfully.")
     except Exception as e:
-        print(f"\n❌ Connection failed: {e}")
+        print(f"\n❌ Connection failed or error during G-code send: {e}")
 
 if __name__ == "__main__":
     test_arduino_connection()
