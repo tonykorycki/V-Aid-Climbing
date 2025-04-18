@@ -2,109 +2,104 @@ import serial
 import time
 import os
 import sys
+import random
+import numpy as np
 
-# Add parent directory to path to access paths.py if needed
+# Add parent directory to path if needed
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-# Arduino serial connection
-ARDUINO_PORT = '/dev/ttyUSB0'  # Default for most USB Arduino connections
+# Grid settings
+GRID_WIDTH = 12
+GRID_HEIGHT = 12
+GRID_SPACING = 10  # mm
+
+# Arduino serial settings
+ARDUINO_PORT = '/dev/ttyUSB0'
 ARDUINO_BAUD = 115200
 
+def generate_test_grid():
+    """ Generate a 12x12 grid with ~3 '1's and 2 '2's """
+    grid = np.zeros((GRID_HEIGHT, GRID_WIDTH), dtype=int)
+    ones = random.sample(range(GRID_HEIGHT * GRID_WIDTH), 3)
+    twos = random.sample([i for i in range(GRID_HEIGHT * GRID_WIDTH) if i not in ones], 2)
+
+    for idx in ones:
+        y, x = divmod(idx, GRID_WIDTH)
+        grid[y, x] = 1
+    for idx in twos:
+        y, x = divmod(idx, GRID_WIDTH)
+        grid[y, x] = 2
+
+    return grid
+
+def generate_relative_gcode(grid):
+    """ Generate G-code using relative positioning """
+    gcode = ["G21 ; Set units to mm", "G91 ; Relative positioning"]
+    current_x, current_y = 0, 0
+
+    for y in range(GRID_HEIGHT):
+        for x in range(GRID_WIDTH):
+            val = grid[y, x]
+            if val in [1, 2]:
+                target_x = x * GRID_SPACING
+                target_y = y * GRID_SPACING
+                dx = target_x - current_x
+                dy = target_y - current_y
+                gcode.append(f"G0 X{dx:.2f} Y{dy:.2f} F3000")
+                gcode.append("M3 S255 ; Activate actuator")
+                gcode.append("G4 P0.5 ; Dwell 0.5s")
+                gcode.append("M5 ; Deactivate actuator")
+                current_x += dx
+                current_y += dy
+
+    return "\n".join(gcode)
+
+def send_gcode(ser, gcode):
+    """ Send G-code line by line over serial """
+    for line in gcode.splitlines():
+        print(f"Sending: {line}")
+        ser.write((line + "\n").encode())
+        time.sleep(0.1)
+
 def test_arduino_connection():
-    print("==== Arduino Connection Test ====")
-    
-    # Common Arduino ports on Raspberry Pi
+    print("==== Arduino Connection & G-code Test ====")
     common_ports = ['/dev/ttyUSB0', '/dev/ttyACM0']
-    
-    # Try to detect Arduino port
     detected_port = None
+
     for port in common_ports:
         try:
-            with serial.Serial(port, 115200, timeout=1) as ser:
+            with serial.Serial(port, 115200, timeout=1) as _:
                 detected_port = port
-                print(f"Arduino detected on {port}")
+                print(f"✓ Arduino detected on {port}")
                 break
         except:
             pass
-    
-    if detected_port:
-        arduino_port = detected_port
 
-    else:
-        print("No Arduino automatically detected.")
-        port = input(f"Enter Arduino port (default: {ARDUINO_PORT}): ").strip()
-        if port:
-            arduino_port = port
-        else:
-            arduino_port = ARDUINO_PORT
-    
-    baud = input(f"Enter baud rate (default: {ARDUINO_BAUD}): ").strip()
-    if baud.isdigit():
-        arduino_baud = int(baud)
-    else:
-        arduino_baud = ARDUINO_BAUD
-    
-    print(f"Attempting to connect to Arduino on {arduino_port} at {arduino_baud} baud")
-    
+    arduino_port = detected_port if detected_port else input(f"Enter Arduino port (default: {ARDUINO_PORT}): ").strip() or ARDUINO_PORT
+    baud_input = input(f"Enter baud rate (default: {ARDUINO_BAUD}): ").strip()
+    arduino_baud = int(baud_input) if baud_input.isdigit() else ARDUINO_BAUD
+
+    print(f"Connecting to Arduino on {arduino_port} at {arduino_baud} baud...")
+
     try:
-        # Try opening the connection
         with serial.Serial(arduino_port, arduino_baud, timeout=5) as ser:
             print("✓ Serial connection established!")
-            
-            # Send test commands
-            test_commands = [
-                "M115",    # Get firmware info
-                "G28",     # Home all axes
-                "G0 X10 Y10 F1000",  # Move to position
-                "G0 X0 Y0 F1000"     # Return to origin
-            ]
-            
-            for cmd in test_commands:
-                print(f"Sending: {cmd}")
-                ser.write(f"{cmd}\n".encode())
-                time.sleep(1)
-                
-                # Read response (may vary based on firmware)
-                response = ""
-                start_time = time.time()
-                while time.time() - start_time < 3:  # 3 second timeout
-                    if ser.in_waiting:
-                        line = ser.readline().decode('utf-8', errors='ignore').strip()
-                        response += line + "\n"
-                        if "ok" in line.lower():
-                            break
-                    time.sleep(0.1)
-                
-                print(f"Response: {response if response else 'No response (may be normal)'}")
-                
-            print("\n✓ Arduino communication test complete!")
-            print("Note: For 3D printer firmware, responses should include 'ok'")
-            print("For custom Arduino firmware, responses may vary")
+
+            # Generate and send test G-code
+            grid = generate_test_grid()
+            print("Generated Test Grid:\n", grid)
+            gcode = generate_relative_gcode(grid)
+            send_gcode(ser, gcode)
+
+            print("\n✓ G-code test complete!")
             return True
-            
+
     except serial.SerialException as e:
-        print(f"\n✗ Error opening serial port: {e}")
-        print("\nTroubleshooting tips:")
-        print("1. Make sure the Arduino is connected to the USB port")
-        print("2. Check available ports:")
-        
-        # Show available ports based on platform
-        if sys.platform.startswith('linux'):
-            print("   Run: ls -l /dev/tty*")
-            os.system("ls -l /dev/tty*")
-        elif sys.platform.startswith('win'):
-            print("   Check Device Manager > Ports (COM & LPT)")
-        elif sys.platform.startswith('darwin'):
-            print("   Run: ls -l /dev/cu.*")
-            os.system("ls -l /dev/cu.*")
-            
-        print("3. Verify the Arduino has GCODE-compatible firmware installed")
-        print("4. Try a different USB cable")
-        print("5. Ensure you have permission to access the port (may need to run as sudo)")
+        print(f"\n✗ Serial port error: {e}")
+        print("Try checking cable, port, or permissions.")
         return False
-        
     except Exception as e:
-        print(f"\n✗ Error during communication: {e}")
+        print(f"\n✗ Unexpected error: {e}")
         return False
 
 if __name__ == "__main__":
