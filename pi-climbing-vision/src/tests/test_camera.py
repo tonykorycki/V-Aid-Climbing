@@ -75,11 +75,32 @@ def capture_image(camera, save_path="captured_image.jpg"):
     """
     try:
         if hasattr(camera, 'capture_array'):  # PiCamera2
-            camera.start()
-            time.sleep(2)  # Give camera time to adjust
-            image = camera.capture_array()
-            cv2.imwrite(save_path, image)
-            camera.stop()
+camera.start()
+time.sleep(1)
+
+# Trigger autofocus
+print("🔍 Triggering autofocus...")
+camera.set_controls({"AfMode": 1})  # 1 = Auto
+time.sleep(0.5)
+camera.set_controls({"AfTrigger": 0})  # 0 = Start trigger
+time.sleep(2)  # Allow focus to settle
+
+# Optional: wait until autofocus completes (status is 2 = focused)
+focus_done = False
+for _ in range(10):
+    metadata = camera.capture_metadata()
+    af_state = metadata.get("AfState")
+    if af_state == 2:
+        print("✅ Autofocus complete.")
+        focus_done = True
+        break
+    time.sleep(0.2)
+
+if not focus_done:
+    print("⚠️ Autofocus did not report completion in time.")
+
+camera.capture_file(save_path)
+camera.stop()
         else:  # OpenCV VideoCapture
             ret, frame = camera.read()
             if ret:
