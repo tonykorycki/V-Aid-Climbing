@@ -3,7 +3,6 @@ import time
 import pyttsx3
 import serial
 import RPi.GPIO as GPIO
-import threading
 from paths import YOLO_MODEL_PATH, IMAGE_DIR, RESULTS_DIR, LLM_API_URL
 from utils.camera_helper import setup_camera, capture_image
 from utils.detection import detect_and_classify_holds
@@ -21,9 +20,6 @@ ARDUINO_BAUD = 115200
 GRID_WIDTH = 12
 GRID_HEIGHT = 12
 GRID_SPACING = 10  # mm
-
-stop_speaking = False
-
 
 
 time.sleep(2)  # Allow time for Arduino to reset
@@ -43,8 +39,6 @@ def setup_gpio():
     # With PUD_DOWN: Button press = HIGH, Released = LOW
     GPIO.setup(CYCLE_BUTTON_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
     GPIO.setup(SELECT_BUTTON_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-    GPIO.add_event_detect(CYCLE_BUTTON_PIN, GPIO.FALLING, callback=stop_tts_callback, bouncetime=300)
-
 
 # Wait for button press with debounce
 def wait_for_button_press(pin):
@@ -58,28 +52,8 @@ def wait_for_button_press(pin):
 # Speak text and wait for completion
 def speak(engine, text):
     print(text)  # For debugging
-    global stop_speaking
-    stop_speaking = False
-
-    def speak_and_check():
-        engine.say(text)
-        engine.runAndWait()
-
-    t = threading.Thread(target=speak_and_check)
-    t.start()
-
-    while t.is_alive():
-        if stop_speaking:
-            engine.stop()
-            print("Speech interrupted.")
-            break
-        time.sleep(0.05)
-
-
-def stop_tts_callback(channel):
-    global stop_speaking
-    stop_speaking = True
-
+    engine.say(text)
+    engine.runAndWait()
 
 # Cycle through options with audio feedback - improved with state tracking
 def select_from_options(engine, options, prompt):
