@@ -57,6 +57,7 @@ def wait_for_button_press(pin):
 
 # Speak text and wait for completion
 def speak(engine, text):
+    print(text)  # For debugging
     global stop_speaking
     stop_speaking = False
 
