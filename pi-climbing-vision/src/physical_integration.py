@@ -16,6 +16,12 @@ SELECT_BUTTON_PIN = 27  # GPIO pin for selecting options
 # Arduino serial connection
 ARDUINO_PORT = '/dev/ttyUSB0'  # Adjust as necessary for your setup
 ARDUINO_BAUD = 115200
+
+GRID_WIDTH = 12
+GRID_HEIGHT = 12
+GRID_SPACING = 10  # mm
+
+
 time.sleep(2)  # Allow time for Arduino to reset
 
 # Initialize text-to-speech engine
@@ -84,40 +90,29 @@ def select_from_options(engine, options, prompt):
 
 # Convert grid to GCODE
 
-def grid_to_gcode(grid_map, bed_size_x=200, bed_size_y=200):
+def grid_to_gcode(grid, bed_size_x=200, bed_size_y=200):
     """Convert 12x12 grid to GCODE for tactile representation"""
     gcode = []
     
-    # Start with homing
-    gcode.append("G28 ; Home all axes")
-    
-    # Calculate cell size
-    cell_width = bed_size_x / 12
-    cell_height = bed_size_y / 12
-    
     # Add header
-    gcode.append("M107 ; Turn off fan")
-    gcode.append("G90 ; Absolute positioning")
-    gcode.append("M83 ; Relative extruder mode")
+    gcode = ["G21 ; Set units to mm", "G91 ; Relative positioning"]
+    current_x, current_y = 0, 0
     
     # Move through each cell in the grid
-    for y in range(12):
-        for x in range(12):
-            # Calculate center position of this cell
-            pos_x = (x + 0.5) * cell_width
-            pos_y = (y + 0.5) * cell_height
-            
-            # Move to position
-            gcode.append(f"G0 X{pos_x:.2f} Y{pos_y:.2f} F3000 ; Move to cell ({x},{y})")
-            
-            # If there's a hold at this position, activate the actuator
-            if grid_map[11-y][x] > 0:  # Note: Grid is inverted, bottom is y=11
-                # Different heights based on hold size (1=small, 2=large)
-                height = 5 if grid_map[11-y][x] == 1 else 10
-                gcode.append(f"M280 P0 S{90+height} ; Raise pin to {height}mm")
-                gcode.append("G4 P500 ; Wait 500ms")
-                gcode.append("M280 P0 S90 ; Lower pin")
-                gcode.append("G4 P200 ; Wait 200ms")
+    for y in range(GRID_HEIGHT):
+        for x in range(GRID_WIDTH):
+            val = grid[y, x]
+            if val in [1, 2]:
+                target_x = x * GRID_SPACING
+                target_y = y * GRID_SPACING
+                dx = target_x - current_x
+                dy = target_y - current_y
+                gcode.append(f"G0 X{dx} Y{dy} F3000")
+                gcode.append("M3 S255 ; Activate actuator")
+                gcode.append("G4 P0.5 ; Dwell 0.5s")
+                gcode.append("M5 ; Deactivate actuator")
+                current_x += dx
+                current_y += dy
     
     # Return to origin when done
     gcode.append("G0 X0 Y0 F3000 ; Return to origin")
@@ -264,15 +259,7 @@ def main():
             
         num_holds = len(holds_info)
         speak(engine, f"Detection complete. Found {num_holds} {target_color} holds on the wall.")
-        
-        # Generate route description
-        speak(engine, "Generating route description. Please wait...")
-        description = generate_route_description(grid_map, use_local_llm=False, api_url=LLM_API_URL)
-        
-        # Speak the description
-        speak(engine, "Here is the description of the climbing route:")
-        speak(engine, description)
-        
+                
         # Ask if user wants to feel the tactile representation
         use_tactile = select_from_options(engine, ["Yes", "No"], 
                                          "Would you like to create a tactile representation of the route?") == "Yes"
@@ -295,6 +282,13 @@ def main():
             else:
                 speak(engine, "Failed to send route to tactile display. Check connections and try again.")
         
+        speak(engine, "Generating route description. Please wait...")
+        description = generate_route_description(grid_map, use_local_llm=False, api_url=LLM_API_URL)
+        
+        # Speak the description
+        speak(engine, "Here is the description of the climbing route:")
+        speak(engine, description)
+
         # Completion
         speak(engine, "Analysis complete. Thank you for using the climbing route analyzer.")
         

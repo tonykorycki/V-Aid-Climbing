@@ -38,7 +38,7 @@ def setup_camera(use_picamera=True, resolution=RESOLUTION):
                 ret, frame = cap.read()
                 if not ret:
                     continue
-                cv2.waitKey(100)
+                cv2.waitKey(1000)
             '''
             ADDED AUTOFOCUS FEATURE AND TIMING FOR REFOCUS
             '''
