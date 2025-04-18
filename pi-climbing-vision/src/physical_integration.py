@@ -3,6 +3,8 @@ import time
 import pyttsx3
 import serial
 import RPi.GPIO as GPIO
+import numpy as np
+import cv2
 from paths import YOLO_MODEL_PATH, IMAGE_DIR, RESULTS_DIR, LLM_API_URL
 from utils.camera_helper import setup_camera, capture_image
 from utils.detection import detect_and_classify_holds
@@ -27,7 +29,7 @@ time.sleep(2)  # Allow time for Arduino to reset
 # Initialize text-to-speech engine
 def init_speech():
     engine = pyttsx3.init()
-    engine.setProperty('rate', 150)  # Speed of speech
+    engine.setProperty('rate', 170)  # Speed of speech
     engine.setProperty('volume', 0.9)  # Volume (0.0 to 1.0)
     return engine
 
@@ -61,7 +63,7 @@ def select_from_options(engine, options, prompt):
     current_index = 0
     
     # Announce first option
-    speak(engine, f"Option: {options[current_index]}")
+    speak(engine, f"{options[current_index]}")
     
     # Button state tracking to avoid multiple triggers per press
     last_cycle_state = False  # For PUD_UP: False means not pressed
@@ -174,6 +176,30 @@ def send_gcode_to_arduino(gcode, engine):
         print(f"Error communicating with Arduino: {e}")
         return False
 
+def display_text_grid(grid_map: np.ndarray):
+    """
+    Display a text-based representation of the climbing route grid in the terminal.
+    
+    Args:
+        grid_map: 12x12 numpy array representing the route
+    """
+    print("\nRoute Grid Map (Text Representation):")
+    print("  " + "".join([f"{i:2d}" for i in range(grid_map.shape[1])]))
+    print("  " + "-" * (grid_map.shape[1] * 2))
+    
+    for i, row in enumerate(grid_map):
+        line = f"{i:2d}|"
+        for cell in row:
+            if cell == 0:
+                line += ". "  # Empty space
+            elif cell == 1:
+                line += "o "  # Small hold
+            elif cell == 2:
+                line += "O "  # Large hold
+        print(line)
+    
+    print("\nLegend: '.' = Empty, 'o' = Small hold, 'O' = Large hold")
+
 # Main function
 def main():
     # Initialize components
@@ -259,6 +285,9 @@ def main():
             
         num_holds = len(holds_info)
         speak(engine, f"Detection complete. Found {num_holds} {target_color} holds on the wall.")
+
+        display_text_grid(grid_map)
+
                 
         # Ask if user wants to feel the tactile representation
         use_tactile = select_from_options(engine, ["Yes", "No"], 
