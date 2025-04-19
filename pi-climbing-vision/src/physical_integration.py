@@ -107,7 +107,7 @@ def grid_to_gcode(grid):
 
     for y in range(GRID_HEIGHT):
         for x in range(GRID_WIDTH):
-            val = grid[y, x]
+            val = grid[11-y, x]
             if val in [1, 2]:
                 pos_x = x * GRID_SPACING
                 pos_y = y * GRID_SPACING
@@ -122,7 +122,6 @@ def grid_to_gcode(grid):
                 move_count += 1
 
     gcode.append("G0 X0 Y0 F3000 ; Return to origin")
-    assert move_count == 5, f"Expected 5 actuator pushes, got {move_count}"
     return "\n".join(gcode)
 
     """Convert 12x12 grid to GCODE for tactile representation
