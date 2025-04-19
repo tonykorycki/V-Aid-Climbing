@@ -10,6 +10,9 @@ from utils.camera_helper import setup_camera, capture_image
 from utils.detection import detect_and_classify_holds
 from utils.grid_mapping import create_route_visualization
 from utils.llm_client import generate_route_description
+'''from utils.arduino import send_gcode_to_arduino
+from utils.arduino import grid_to_gcode
+from utils.arduino import ARDUINO_PORT, ARDUINO_BAUD, GRID_WIDTH, GRID_HEIGHT, GRID_SPACING'''
 
 # Button GPIO pin configurations
 CYCLE_BUTTON_PIN = 17  # GPIO pin for cycling through options
@@ -63,7 +66,8 @@ def select_from_options(engine, options, prompt):
     current_index = 0
     
     # Announce first option
-    speak(engine, f"{options[current_index]}")
+    speak(engine, f"Option {str(options[current_index])}")
+    
     
     # Button state tracking to avoid multiple triggers per press
     last_cycle_state = False  # For PUD_UP: False means not pressed
@@ -77,11 +81,11 @@ def select_from_options(engine, options, prompt):
         # Detect new press of cycle button (transition from not pressed to pressed)
         if cycle_pressed and not last_cycle_state:
             current_index = (current_index + 1) % len(options)
-            speak(engine, f"Option: {options[current_index]}")
+            speak(engine, f"Option {str(options[current_index])}")
         
         # Detect new press of select button (transition from not pressed to pressed)
         if select_pressed and not last_select_state:
-            speak(engine, f"Selected: {options[current_index]}")
+            speak(engine, f"Selected {str(options[current_index])}")
             return options[current_index]
         
         # Update last states
@@ -92,8 +96,36 @@ def select_from_options(engine, options, prompt):
 
 # Convert grid to GCODE
 
-def grid_to_gcode(grid, bed_size_x=200, bed_size_y=200):
-    """Convert 12x12 grid to GCODE for tactile representation"""
+def grid_to_gcode(grid):
+    """Generate absolute G-code with 5 actuator pushes, Z-lift, and 3s delay between each."""
+    gcode = [
+        "G21 ; Use millimeters",
+        "G90 ; Absolute positioning"
+    ]
+
+    move_count = 0
+
+    for y in range(GRID_HEIGHT):
+        for x in range(GRID_WIDTH):
+            val = grid[y, x]
+            if val in [1, 2]:
+                pos_x = x * GRID_SPACING
+                pos_y = y * GRID_SPACING
+
+                gcode.append(f"G0 X{pos_x} Y{pos_y} F3000 ; Move to ({x},{y})")
+                gcode.append("G0 Z5 F1000 ; Lift")
+                gcode.append("M3 S255 ; Activate actuator")
+                gcode.append("G4 P0.5 ; Hold actuator")
+                gcode.append("M5 ; Deactivate actuator")
+                gcode.append("G0 Z0 F1000 ; Lower")
+                gcode.append("G4 P1 ; Wait 3 seconds before next")
+                move_count += 1
+
+    gcode.append("G0 X0 Y0 F3000 ; Return to origin")
+    assert move_count == 5, f"Expected 5 actuator pushes, got {move_count}"
+    return "\n".join(gcode)
+
+    """Convert 12x12 grid to GCODE for tactile representation
     gcode = []
     
     # Add header
@@ -119,19 +151,7 @@ def grid_to_gcode(grid, bed_size_x=200, bed_size_y=200):
     # Return to origin when done
     gcode.append("G0 X0 Y0 F3000 ; Return to origin")
     
-    return "\n".join(gcode)
-'''
-def grid_to_gcode(grid_map, grid_width=12, grid_height=12):
-    lines = []
-
-    for y in range(grid_height):
-        for x in range(grid_width):
-            # Remember: grid is bottom-up (0 at bottom), so invert y
-            if grid_map[grid_height - 1 - y][x] > 0:
-                lines.append(f"{x},{y}")
-
-    return "\n".join(lines)
-'''
+    return "\n".join(gcode)"""
     
 # Send GCODE to Arduino
 def send_gcode_to_arduino(gcode, engine):
@@ -161,17 +181,28 @@ def send_gcode_to_arduino(gcode, engine):
             else:
                 arduino_port = ARDUINO_PORT
 
-        with serial.Serial(arduino_port, ARDUINO_BAUD, timeout=10) as ser:
-            speak(engine, "Connecting to tactile display...")
-            time.sleep(2)  # Allow time for Arduino to initialize
-            
-            # Send GCODE line by line
-            for line in gcode.split("\n"):
-                print(f"Sending: {line}")
-                ser.write((line + "\n").encode())
-                time.sleep(0.1)  # Small delay to allow Arduino to process
-            
-            return True
+        ser = serial.Serial(arduino_port, ARDUINO_BAUD, timeout=10)
+        print("→ Flushing and waking Arduino...")
+        ser.write(b"\r\n\r\n")  # Wake/reset GRBL or other firmware
+        time.sleep(2)
+        ser.flushInput()
+
+        for line in gcode.split("\n"):
+            line = line.strip()
+            if not line:
+                continue
+
+            print(f"Sending: {line}")
+            ser.write((line + "\n").encode())
+
+            while True:
+                response = ser.readline().decode().strip().lower()
+                if response == "ok":
+                    break
+                elif response:
+                    print(f"  ↳ Arduino response: {response}")
+        
+        return True
     except Exception as e:
         print(f"Error communicating with Arduino: {e}")
         return False
