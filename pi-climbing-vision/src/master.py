@@ -1,10 +1,11 @@
 import os
 import time
-#import pyttsx3
 import serial
 import RPi.GPIO as GPIO
 import numpy as np
 import cv2
+import subprocess
+import shutil
 from paths import YOLO_MODEL_PATH, IMAGE_DIR, RESULTS_DIR, LLM_API_URL
 from utils.camera_helper import setup_camera, capture_image
 from utils.detection import detect_and_classify_holds
@@ -25,21 +26,115 @@ GRID_SPACING = 15  # mm
 
 time.sleep(2)  # Allow time for Arduino to reset
 
+# TTS engine wrapper class
+class DualTTS:
+    """Dual TTS engine that uses Pico for quick responses and Google for long text."""
+    def __init__(self):
+        self.has_pico = self._check_pico()
+        self.has_gtts = self._check_gtts()
+        
+        if not (self.has_pico or self.has_gtts):
+            print("WARNING: No TTS engines available. Install either SVOX Pico or gTTS.")
+            
+        # Initialize pygame for audio playback
+        import pygame
+        pygame.mixer.init()
+        print("TTS initialized with:")
+        print(f"- SVOX Pico: {'Available' if self.has_pico else 'Not available'}")
+        print(f"- Google TTS: {'Available' if self.has_gtts else 'Not available'}")
+            
+    def _check_pico(self):
+        """Check if SVOX Pico is available."""
+        return shutil.which('pico2wave') is not None
+    
+    def _check_gtts(self):
+        """Check if Google TTS is available."""
+        try:
+            from gtts import gTTS
+            return True
+        except ImportError:
+            return False
+            
+    def speak(self, text, use_google=False):
+        """Speak text using the appropriate TTS engine."""
+        print(f"TTS: {text}")
+        
+        if use_google and self.has_gtts:
+            self._speak_google(text)
+        elif self.has_pico:
+            self._speak_pico(text)
+        else:
+            # Fallback to print only
+            print(f"No TTS available. Would say: {text}")
+            
+    def _speak_pico(self, text):
+        """Use SVOX Pico for speech."""
+        import pygame
+        try:
+            wavfile = "/tmp/speech.wav"
+            # SVOX Pico has character limits, so split text if needed
+            max_chars = 2000
+            if len(text) > max_chars:
+                chunks = [text[i:i+max_chars] for i in range(0, len(text), max_chars)]
+                for chunk in chunks:
+                    subprocess.run(['pico2wave', '-w', wavfile, chunk], stderr=subprocess.DEVNULL)
+                    pygame.mixer.music.load(wavfile)
+                    pygame.mixer.music.play()
+                    while pygame.mixer.music.get_busy():
+                        pygame.time.Clock().tick(10)
+            else:
+                subprocess.run(['pico2wave', '-w', wavfile, text], stderr=subprocess.DEVNULL)
+                pygame.mixer.music.load(wavfile)
+                pygame.mixer.music.play()
+                while pygame.mixer.music.get_busy():
+                    pygame.time.Clock().tick(10)
+        except Exception as e:
+            print(f"SVOX Pico TTS error: {e}")
+    
+    def _speak_google(self, text):
+        """Use Google TTS for speech."""
+        import pygame
+        try:
+            from gtts import gTTS
+            audio_file = "/tmp/speech.mp3"
+            
+            # Google TTS has limits, so split text if needed
+            max_chars = 5000
+            if len(text) > max_chars:
+                chunks = [text[i:i+max_chars] for i in range(0, len(text), max_chars)]
+                for chunk in chunks:
+                    tts = gTTS(text=chunk, lang='en', slow=False)
+                    tts.save(audio_file)
+                    pygame.mixer.music.load(audio_file)
+                    pygame.mixer.music.play()
+                    while pygame.mixer.music.get_busy():
+                        pygame.time.Clock().tick(10)
+            else:
+                tts = gTTS(text=text, lang='en', slow=False)
+                tts.save(audio_file)
+                pygame.mixer.music.load(audio_file)
+                pygame.mixer.music.play()
+                while pygame.mixer.music.get_busy():
+                    pygame.time.Clock().tick(10)
+        except Exception as e:
+            print(f"Google TTS error: {e}")
+            # Fallback to Pico
+            if self.has_pico:
+                print("Falling back to SVOX Pico...")
+                self._speak_pico(text)
+
 # Initialize text-to-speech engine
 def init_speech():
-    # Import and initialize Mimic3 TTS
-    from mimic3_tts import Mimic3TTS
-    
-    # Create TTS engine with an appropriate voice
-    tts = Mimic3TTS(voice="en_US/ljspeech_low")
-    return tts
+    return DualTTS()
+
+# Speak text and wait for completion
+def speak(tts, text, use_google=False):
+    """Speak text using TTS engine."""
+    tts.speak(text, use_google)
 
 # GPIO setup
 def setup_gpio():
     GPIO.setmode(GPIO.BCM)
-    # You can use either PUD_UP or PUD_DOWN depending on your hardware setup
-    # With PUD_UP: Button press = LOW, Released = HIGH
-    # With PUD_DOWN: Button press = HIGH, Released = LOW
     GPIO.setup(CYCLE_BUTTON_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
     GPIO.setup(SELECT_BUTTON_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
@@ -52,32 +147,13 @@ def wait_for_button_press(pin):
         time.sleep(0.05)
     time.sleep(0.2)  # Debounce delay
 
-# Speak text and wait for completion
-def speak(tts, text):
-    print(text)  # For debugging
-    
-    # Generate and play audio
-    import pygame
-    pygame.mixer.init()
-    
-    # Convert text to audio file
-    audio_file = "/tmp/speech.wav"
-    tts.synthesize(text, audio_file)
-    
-    # Play the audio
-    pygame.mixer.music.load(audio_file)
-    pygame.mixer.music.play()
-    while pygame.mixer.music.get_busy():
-        pygame.time.Clock().tick(10)
-
 # Cycle through options with audio feedback - improved with state tracking
 def select_from_options(tts, options, prompt):
-    speak(tts, prompt)
+    speak(tts, prompt) # Use Pico for UI interactions
     current_index = 0
     
     # Announce first option
     speak(tts, f"Option {str(options[current_index])}")
-    
     
     # Button state tracking to avoid multiple triggers per press
     last_cycle_state = False  # For PUD_UP: False means not pressed
@@ -302,7 +378,6 @@ def main():
         speak(tts, f"Detection complete. Found {num_holds} {target_color} holds on the wall.")
 
         display_text_grid(grid_map)
-
                 
         # Ask if user wants to feel the tactile representation
         use_tactile = select_from_options(tts, ["Yes", "No"], 
@@ -330,21 +405,23 @@ def main():
             if send_gcode_to_arduino(gcode, tts):
                 speak(tts, "Tactile representation complete. You can now explore the route.")
             else:
-                speak(tts, "Failed to send route to tactile display. Check connections and try again.")
+                speak(tts, "Failed to send tactile display. Check connections and try again.")
         
         speak(tts, "Generating route description. Please wait...")
         description = generate_route_description(grid_map, use_local_llm=False, api_url=LLM_API_URL)
         
-        # Speak the description
-        speak(tts, "Here is the description of the climbing route:")
-        speak(tts, "Press the cycle button to skip at any time.")
-        speak(tts, description)
+        # Speak the description using Google TTS for higher quality
+        speak(tts, "Here is the description of the climbing route:", use_google=False)
+        speak(tts, "Press the cycle button to skip at any time.", use_google=False)
+        # Use Google TTS for the route description (better quality)
+        speak(tts, description, use_google=True)
 
         while True:
             repeat = select_from_options(tts, ["Yes", "No"], 
                                       "Would you like to hear the description again?")
             if repeat == "Yes":
-                 speak(tts, description)
+                 # Continue using Google TTS for the route description
+                 speak(tts, description, use_google=True)
             else:
                 break
 
@@ -352,6 +429,7 @@ def main():
         speak(tts, "Analysis complete. Thank you for using the climbing route analyzer.")
         
     except Exception as e:
+        print(f"Error in main function: {e}")
         speak(tts, f"An error occurred: {str(e)}")
     finally:
         # Clean up

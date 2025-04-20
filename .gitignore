@@ -82,8 +82,6 @@ env/
 
 # Explicitly exclude results and training directories
 computer_vision/results/
-computer_vision/train*/
-ML-hold-detection/*/train*/
 pi-climbing-vision/data/results/
 pi-climbing-vision/src/models/train*/
 **/runs/
@@ -94,6 +92,39 @@ ML-hold-detection/*/weights/
 **/weights/*.pt
 **/train*/weights/
 **/runs/
+
+# TTS-specific ignores
+# Temporary audio files
+/tmp/speech.*
+/tmp/*.wav
+/tmp/*.mp3
+/tmp/*_tts_*
+
+# TTS cache files
+.gtts-token
+.cache/
+gtts_cache/
+
+# Festival TTS specific
+festival/
+festival_cache/
+*.utt
+*.scm
+
+# MBROLA/eSpeak voice data
+mbrola*/
+espeak-data/
+voices/
+voice_data/
+
+# Generated GCODE files
+*.gcode
+route_*.gcode
+
+# Audio testing files
+audio_test/
+test_*.wav
+test_*.mp3
 
 # OS specific
 .DS_Store
