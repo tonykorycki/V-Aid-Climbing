@@ -1,10 +1,48 @@
-# Raspberry Pi Computer Vision Project for visually impaired climbers
+# V-Aid Climbing: Vision-Assisted System for Visually Impaired Climbers
 
-This project provides computer vision tools to analyze climbing routes by detecting holds, mapping them onto a grid, and generating natural language descriptions. The system uses YOLO object detection to identify climbing holds and volumes, and optionally a Language Model (LLM) to describe the routes.
+![Status: Active](https://img.shields.io/badge/Status-Active-green)
+![Python 3.7+](https://img.shields.io/badge/Python-3.7+-blue)
+![Platform: Raspberry Pi](https://img.shields.io/badge/Platform-Raspberry%20Pi-red)
 
-The project has two main components:
-1. **Pi-Climbing-Vision**: Optimized version for Raspberry Pi devices
-2. **Computer Vision Scripts**: Can be run on any computer with Python support
+A computer vision system designed to help visually impaired climbers understand climbing routes through detection, tactile feedback, and audio descriptions.
+
+## Table of Contents
+
+- Overview
+- Components
+- Pi-Climbing-Vision
+  - Setup Instructions
+  - Running the Program
+  - Requirements
+  - Performance Notes
+- Tactile Plotter System
+  - Hardware Components
+  - Plotter Features
+  - Coordinate System
+- Computer Vision Scripts
+  - Setup for Computer
+  - Running the Computer Scripts
+  - Setting Up Local LLM
+- Features
+- Text-to-Speech Options
+- Output
+- Advanced Configuration
+- Troubleshooting
+
+---
+
+## Overview
+
+This project provides computer vision tools to analyze climbing routes by detecting holds, mapping them onto a grid, and generating natural language descriptions. The system uses YOLO object detection to identify climbing holds and volumes, a Language Model (LLM) to describe the routes, and a tactile plotter system to create physical representations for the visually impaired.
+
+## Components
+
+The project has three main components:
+1. **Pi-Climbing-Vision**: Optimized vision system for Raspberry Pi devices
+2. **Tactile Plotter System**: Hardware setup with Arduino to create physical maps
+3. **Computer Vision Scripts**: Can be run on any computer with Python support
+
+---
 
 ## Pi-Climbing-Vision
 
@@ -20,7 +58,7 @@ The project has two main components:
    - Create an account at [huggingface.co](https://huggingface.co)
    - Go to Settings → Access Tokens
    - Create a new token with "read" permissions
-   - Update the token in config.py
+   - Update the token in paths.py
 
 3. **Run the setup script** to create a virtual environment and install dependencies:
    ```bash
@@ -31,6 +69,11 @@ The project has two main components:
 4. **Prepare images or camera**:
    - Add test images to `data/images/` directory
    - OR ensure your Pi Camera or USB webcam is connected
+
+5. **Hardware Setup** (for tactile feedback):
+   - Connect Arduino with GRBL firmware to Raspberry Pi via USB
+   - Ensure the plotter hardware is assembled with servo actuator
+   - Connect GPIO buttons (pins 17 and 27) for user interaction
 
 ### Running the Program
 
@@ -46,22 +89,38 @@ The project has two main components:
 
 3. **Run the main program**:
    ```bash
-   python src/pi_CV_main.py  # Full featured version
+   python src/master.py  # Full integrated version with tactile output
+   # OR
+   python src/pi_CV_main.py  # Vision and LLM without tactile
    # OR
    python src/pi_API_test.py  # Simplified API test version
    ```
 
-4. **Follow the interactive prompts** to:
+4. **Debug the plotter** (if needed):
+   ```bash
+   python src/ploter_debug.py
+   ```
+
+5. **Test TTS engines** (if needed):
+   ```bash
+   python src/tests/test_tts.py
+   ```
+
+6. **Follow the interactive prompts** to:
    - Choose between camera or saved images
    - Select hold colors to detect
    - Configure sensitivity and detection parameters
-   - Generate and optionally hear route descriptions
+   - Create tactile representations of routes
+   - Generate and hear route descriptions
 
 ### Requirements
 
 - Raspberry Pi 5 (recommended) or Pi 4 with at least 4GB RAM
 - Pi Camera or USB webcam (optional for new captures)
 - Internet connection for Hugging Face API
+- Arduino with GRBL firmware for tactile output
+- 2-axis plotter setup with servo actuator
+- Momentary push buttons for user interface
 - Python 3.7+
 - Virtual environment (created by setup.sh)
 
@@ -70,6 +129,38 @@ The project has two main components:
 - YOLO detection takes 10-30 seconds per image on a Raspberry Pi 5
 - The Pi may heat up during processing - cooling is recommended
 - Lower resolution images will process faster
+- TTS with Google provides better quality but requires internet 
+- SVOX Pico TTS provides faster responses for basic UI interactions
+
+---
+
+## Tactile Plotter System
+
+The system includes a 2D plotter with servo actuator that creates tactile representations of detected climbing holds:
+
+### Hardware Components
+
+- Arduino board with GRBL firmware
+- 2-axis plotter system (X/Y movement)
+- Servo actuator for pressing pins
+- Optional: GPIO buttons for hands-free control
+
+### Plotter Features
+
+- Maps climbing holds onto a configurable grid (default 12×12)
+- Creates physical map of detected climbing holds
+- Each hold is physically represented by actuator movement
+- Calibration utilities for precise positioning
+- Custom G-code generation based on detected holds
+- Offsets configurable for various plotter setups
+
+### Coordinate System
+
+- (0,0) is at the bottom left corner of the grid
+- X increases to the right, Y increases upward (in logical coordinates)
+- Physical movements are inverted (negative coordinates) to match plotter mechanics
+
+---
 
 ## Computer Vision Scripts
 
@@ -91,63 +182,84 @@ You can also run the analysis on a regular computer (not just Raspberry Pi) usin
 
 You can use any of these three main scripts:
 
-- **CV_type2.py**: Main script with auto-brightness adjustment and LLM integration
+- **CV_LLM_integration.py**: Optimized version with LLM integration
+  ```bash
+  python computer_vision/CV_LLM_integration.py
+  ```
+- **CV-ML-2.py**: Version with ML difficulty prediction (no LLM)
+  ```bash
+  python computer_vision/CV-ML-2.py
+  ```
+- **CV_type2.py**: Newest CV script with auto-brightness adjustment and LLM integration
   ```bash
   python computer_vision/CV_type2.py
   ```
 
-- **CV-ML-2.py**: Version with machine learning difficulty prediction
-  ```bash
-  python computer_vision/CV-ML-2.py
-  ```
 
-- **CV_LLM_integration.py**: Optimized version with better LLM integration
-  ```bash
-  python computer_vision/CV_LLM_integration.py
-  ```
+
+
 
 ### Setting Up Local LLM
 
 To use the local LLM functionality (instead of API):
 
 1. When prompted during script execution, choose "y" when asked to install llama-cpp-python and huggingface_hub
-
 2. The script will guide you to select a model from available GGUF models (Llama 2 variants)
-
 3. The model will be downloaded (may be several GB) and tested
-
 4. For subsequent runs, the script will use the downloaded model
-
 5. Select "local" when asked to use local LLM or API
+
+---
 
 ## Features
 
 - **Color Detection**: Isolate holds of a specific color (red, blue, green, yellow, etc.)
 - **Hold Classification**: Detect and classify both small holds and larger volumes
 - **Grid Mapping**: Convert detected holds to a 12x12 grid representation
+- **Tactile Output**: Create physical maps using the plotter system
+- **Audio Interface**: Voice prompts and speech output for visually impaired users
 - **Route Description**: Generate natural language descriptions of the climbing route
-- **Text-to-Speech**: Option to have the route description read aloud
+- **Text-to-Speech**: Multiple TTS engines for high-quality speech output
+- **Button Interface**: Physical buttons for navigation without screen
 - **Visualization**: Various visualization options for detection results
+
+## Text-to-Speech Options
+
+The system supports multiple TTS engines:
+- **SVOX Pico**: Fast responses, good clarity, works offline
+- **Google TTS**: Highest quality, requires internet connection
+- **Festival**: Alternative offline option
+- **MBROLA**: Enhanced quality offline option with specialized voices
+- **pyttsx3**: Default fallback option
 
 ## Output
 
 The system produces several outputs:
 - Annotated images showing detected holds
 - Grid maps representing the climbing route
+- Tactile physical representation via the plotter
+- Audio descriptions read aloud
 - Text descriptions of the route generated by the LLM
 - CSV files with grid mapping data
 - Text files with details about each detected hold
 
 ## Advanced Configuration
 
-- To optimize performance on Raspberry Pi, adjust the YOLO model path in config.py
-- For improved LLM responses, you can try different models in config.py:
+- To optimize performance on Raspberry Pi, adjust the YOLO model path in paths.py
+- For improved LLM responses, you can try different models in paths.py:
   ```python
   LLM_API_URL = "https://api-inference.huggingface.co/models/HuggingFaceH4/zephyr-7b-beta"
   ```
+- To configure the tactile plotter, use `ploter_debug.py` for calibration
 
 ## Troubleshooting
 
 - If camera detection fails, ensure your camera permissions are set correctly
-- For memory issues on Raspberry Pi, try reducing image resolution in config.py
+- For memory issues on Raspberry Pi, try reducing image resolution in paths.py
 - If LLM responses are slow, consider using the API option instead of local models
+- For plotter issues, run `ploter_debug.py` to test connections and calibration
+- If TTS isn't working, run `test_tts.py` to check which engines are available
+
+---
+
+*This project was created to assist visually impaired climbers and is under active development.*
