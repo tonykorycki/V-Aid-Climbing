@@ -1,6 +1,6 @@
 import os
 import time
-import pyttsx3
+#import pyttsx3
 import serial
 import RPi.GPIO as GPIO
 import numpy as np
@@ -10,9 +10,6 @@ from utils.camera_helper import setup_camera, capture_image
 from utils.detection import detect_and_classify_holds
 from utils.grid_mapping import create_route_visualization
 from utils.llm_client import generate_route_description
-'''from utils.arduino import send_gcode_to_arduino
-from utils.arduino import grid_to_gcode
-from utils.arduino import ARDUINO_PORT, ARDUINO_BAUD, GRID_WIDTH, GRID_HEIGHT, GRID_SPACING'''
 
 # Button GPIO pin configurations
 CYCLE_BUTTON_PIN = 17  # GPIO pin for cycling through options
@@ -24,17 +21,18 @@ ARDUINO_BAUD = 115200
 
 GRID_WIDTH = 12
 GRID_HEIGHT = 12
-GRID_SPACING = 10  # mm
-
+GRID_SPACING = 15  # mm
 
 time.sleep(2)  # Allow time for Arduino to reset
 
 # Initialize text-to-speech engine
 def init_speech():
-    engine = pyttsx3.init()
-    engine.setProperty('rate', 170)  # Speed of speech
-    engine.setProperty('volume', 0.9)  # Volume (0.0 to 1.0)
-    return engine
+    # Import and initialize Mimic3 TTS
+    from mimic3_tts import Mimic3TTS
+    
+    # Create TTS engine with an appropriate voice
+    tts = Mimic3TTS(voice="en_US/ljspeech_low")
+    return tts
 
 # GPIO setup
 def setup_gpio():
@@ -55,18 +53,30 @@ def wait_for_button_press(pin):
     time.sleep(0.2)  # Debounce delay
 
 # Speak text and wait for completion
-def speak(engine, text):
+def speak(tts, text):
     print(text)  # For debugging
-    engine.say(text)
-    engine.runAndWait()
+    
+    # Generate and play audio
+    import pygame
+    pygame.mixer.init()
+    
+    # Convert text to audio file
+    audio_file = "/tmp/speech.wav"
+    tts.synthesize(text, audio_file)
+    
+    # Play the audio
+    pygame.mixer.music.load(audio_file)
+    pygame.mixer.music.play()
+    while pygame.mixer.music.get_busy():
+        pygame.time.Clock().tick(10)
 
 # Cycle through options with audio feedback - improved with state tracking
-def select_from_options(engine, options, prompt):
-    speak(engine, prompt)
+def select_from_options(tts, options, prompt):
+    speak(tts, prompt)
     current_index = 0
     
     # Announce first option
-    speak(engine, f"Option {str(options[current_index])}")
+    speak(tts, f"Option {str(options[current_index])}")
     
     
     # Button state tracking to avoid multiple triggers per press
@@ -81,11 +91,11 @@ def select_from_options(engine, options, prompt):
         # Detect new press of cycle button (transition from not pressed to pressed)
         if cycle_pressed and not last_cycle_state:
             current_index = (current_index + 1) % len(options)
-            speak(engine, f"Option {str(options[current_index])}")
+            speak(tts, f"Option {str(options[current_index])}")
         
         # Detect new press of select button (transition from not pressed to pressed)
         if select_pressed and not last_select_state:
-            speak(engine, f"Selected {str(options[current_index])}")
+            speak(tts, f"Selected {str(options[current_index])}")
             return options[current_index]
         
         # Update last states
@@ -95,65 +105,46 @@ def select_from_options(engine, options, prompt):
         time.sleep(0.1)  # Small delay for debouncing and CPU usage
 
 # Convert grid to GCODE
-
-def grid_to_gcode(grid):
-    """Generate absolute G-code with 5 actuator pushes, Z-lift, and 3s delay between each."""
+def grid_to_gcode(grid, x_offset=0, y_offset=0):
+    """
+    Generate G-code for 2D plotter with servo actuator.
+    
+    Args:
+        grid: The grid representation of the climbing wall
+        x_offset: Offset from the plotter's left edge in mm
+        y_offset: Offset from the plotter's bottom edge in mm
+    """
     gcode = [
         "G21 ; Use millimeters",
-        "G90 ; Absolute positioning"
+        "G90 ; Absolute positioning",
+        f"G0 X{-x_offset} Y{-y_offset} F3000 ; Move to custom home position"
     ]
 
-    move_count = 0
-
     for y in range(GRID_HEIGHT):
         for x in range(GRID_WIDTH):
-            val = grid[11-y, x]
+            val = grid[GRID_HEIGHT-y, x]
             if val in [1, 2]:
-                pos_x = x * GRID_SPACING
-                pos_y = y * GRID_SPACING
+                # Calculate position with negated coordinates to match inverted plotter direction
+                pos_x = -(x * GRID_SPACING + x_offset)
+                pos_y = -(y * GRID_SPACING + y_offset)
 
+                # Move to position
                 gcode.append(f"G0 X{pos_x} Y{pos_y} F3000 ; Move to ({x},{y})")
-                gcode.append("G0 Z5 F1000 ; Lift")
-                gcode.append("M3 S255 ; Activate actuator")
-                gcode.append("G4 P0.5 ; Hold actuator")
-                gcode.append("M5 ; Deactivate actuator")
-                gcode.append("G0 Z0 F1000 ; Lower")
-                gcode.append("G4 P1 ; Wait 3 seconds before next")
-                move_count += 1
+                
+                # Activate actuator (servo down) - increased to S1000 for more travel
+                gcode.append("M3 S1000 ; Activate actuator (servo down)")
+                gcode.append("G4 P0.5 ; Hold for 0.5s")
+                
+                # Deactivate actuator (servo up)
+                gcode.append("M5 ; Deactivate actuator (servo up)")
+                gcode.append("G4 P1 ; Wait 1s before next move")
 
-    gcode.append("G0 X0 Y0 F3000 ; Return to origin")
+    # Return to custom home position with negated coordinates
+    gcode.append(f"G0 X{-x_offset} Y{-y_offset} F3000 ; Return to custom home position")
     return "\n".join(gcode)
 
-    """Convert 12x12 grid to GCODE for tactile representation
-    gcode = []
-    
-    # Add header
-    gcode = ["G21 ; Set units to mm", "G91 ; Relative positioning"]
-    current_x, current_y = 0, 0
-    
-    # Move through each cell in the grid
-    for y in range(GRID_HEIGHT):
-        for x in range(GRID_WIDTH):
-            val = grid[y, x]
-            if val in [1, 2]:
-                target_x = x * GRID_SPACING
-                target_y = y * GRID_SPACING
-                dx = target_x - current_x
-                dy = target_y - current_y
-                gcode.append(f"G0 X{dx} Y{dy} F3000")
-                gcode.append("M3 S255 ; Activate actuator")
-                gcode.append("G4 P0.5 ; Dwell 0.5s")
-                gcode.append("M5 ; Deactivate actuator")
-                current_x += dx
-                current_y += dy
-    
-    # Return to origin when done
-    gcode.append("G0 X0 Y0 F3000 ; Return to origin")
-    
-    return "\n".join(gcode)"""
-    
 # Send GCODE to Arduino
-def send_gcode_to_arduino(gcode, engine):
+def send_gcode_to_arduino(gcode, tts):
     try:
         # Try to detect Arduino port automatically
         common_ports = ['/dev/ttyUSB0', '/dev/ttyACM0']
@@ -171,14 +162,8 @@ def send_gcode_to_arduino(gcode, engine):
         
         if detected_port:
             arduino_port = detected_port
-
         else:
-            print("No Arduino automatically detected.")
-            port = input(f"Enter Arduino port (default: {ARDUINO_PORT}): ").strip()
-            if port:
-                arduino_port = port
-            else:
-                arduino_port = ARDUINO_PORT
+            arduino_port = ARDUINO_PORT
 
         ser = serial.Serial(arduino_port, ARDUINO_BAUD, timeout=10)
         print("→ Flushing and waking Arduino...")
@@ -233,63 +218,63 @@ def display_text_grid(grid_map: np.ndarray):
 # Main function
 def main():
     # Initialize components
-    engine = init_speech()
+    tts = init_speech()
     setup_gpio()
     
     try:
         # Welcome message
-        speak(engine, "Welcome to the climbing route analyzer for visually impaired users.")
-        speak(engine, "This system will scan the climbing wall and create a tactile map.")
+        speak(tts, "Welcome to the climbing route analyzer for visually impaired users.")
+        speak(tts, "This system will scan the climbing wall and create a tactile map.")
         
         # Ask if user wants to use camera or image from directory
-        use_camera = select_from_options(engine, ["Yes", "No"], 
+        use_camera = select_from_options(tts, ["Yes", "No"], 
                                          "Do you want to use the camera to capture a new image?") == "Yes"
         
         # Camera or file processing
         if use_camera:
-            speak(engine, "Setting up camera. Please point it at the climbing wall.")
+            speak(tts, "Setting up camera. Please point it at the climbing wall.")
             # Default to Pi camera for simplicity
             camera = setup_camera(use_picamera=True)
             
             if camera is None:
-                speak(engine, "Failed to initialize camera. Exiting.")
+                speak(tts, "Failed to initialize camera. Exiting.")
                 return
                 
             # Ensure results directory exists
             if not os.path.exists(RESULTS_DIR):
                 os.makedirs(RESULTS_DIR)
                 
-            speak(engine, "Press the select button to capture the image.")
+            speak(tts, "Press the select button to capture the image.")
             wait_for_button_press(SELECT_BUTTON_PIN)
             
-            speak(engine, "Capturing image...")
+            speak(tts, "Capturing image...")
             image_path = capture_image(camera, save_path=os.path.join(RESULTS_DIR, "captured_image.jpg"))
             
             if hasattr(camera, 'release'):
                 camera.release()
                 
             if image_path is None:
-                speak(engine, "Failed to capture image. Exiting.")
+                speak(tts, "Failed to capture image. Exiting.")
                 return
                 
-            speak(engine, "Image captured successfully.")
+            speak(tts, "Image captured successfully.")
         else:
             # Use an image from the directory
             image_files = [f for f in os.listdir(IMAGE_DIR) if f.endswith(('.jpg', '.png', '.jpeg'))]
             if not image_files:
-                speak(engine, "No images found in the specified directory. Exiting.")
+                speak(tts, "No images found in the specified directory. Exiting.")
                 return
             
             image_path = os.path.join(IMAGE_DIR, image_files[0])
-            speak(engine, f"Using the image file {os.path.basename(image_path)}")
+            speak(tts, f"Using the image file {os.path.basename(image_path)}")
             
         # Select color for detection
         color_options = ["red", "blue", "green", "yellow", "orange", "purple", "black", "white", "pink"]
-        target_color = select_from_options(engine, color_options, 
+        target_color = select_from_options(tts, color_options, 
                                           "Please select the color of holds to detect.")
         
         # Use auto-sensitivity based on image brightness
-        speak(engine, "Calculating optimal sensitivity based on image brightness.")
+        speak(tts, "Calculating optimal sensitivity based on image brightness.")
         import cv2
         temp_img = cv2.imread(image_path)
         hsv_img = cv2.cvtColor(temp_img, cv2.COLOR_BGR2HSV)
@@ -298,7 +283,7 @@ def main():
         sensitivity = max(10, min(60, sensitivity))
         min_area = 200  # Default minimum area
         
-        speak(engine, f"Processing image to detect {target_color} holds.")
+        speak(tts, f"Processing image to detect {target_color} holds.")
         
         # Detect holds and map to grid
         holds_info, grid_map, masked_image, result_image, cropped_region = detect_and_classify_holds(
@@ -310,24 +295,30 @@ def main():
         )
         
         if not holds_info:
-            speak(engine, "No holds detected. Please try again with different settings.")
+            speak(tts, "No holds detected. Please try again with different settings.")
             return
             
         num_holds = len(holds_info)
-        speak(engine, f"Detection complete. Found {num_holds} {target_color} holds on the wall.")
+        speak(tts, f"Detection complete. Found {num_holds} {target_color} holds on the wall.")
 
         display_text_grid(grid_map)
 
                 
         # Ask if user wants to feel the tactile representation
-        use_tactile = select_from_options(engine, ["Yes", "No"], 
+        use_tactile = select_from_options(tts, ["Yes", "No"], 
                                          "Would you like to create a tactile representation of the route?") == "Yes"
         
         if use_tactile:
-            speak(engine, "Generating GCODE for the tactile display. This will take a moment.")
+            speak(tts, "Generating GCODE for the tactile display. This will take a moment.")
             
-            # Convert grid to GCODE
-            gcode = grid_to_gcode(grid_map)
+            # Let user configure the home position
+            speak(tts, "Setting up the plotter position.")
+            # Default offsets, adjust based on your setup
+            x_offset = 20  # 20mm from the left edge
+            y_offset = 20  # 20mm from the bottom edge
+            
+            # Convert grid to GCODE with custom offset
+            gcode = grid_to_gcode(grid_map, x_offset=x_offset, y_offset=y_offset)
             
             # Save GCODE to file for reference
             gcode_path = os.path.join(RESULTS_DIR, "route_tactile.gcode")
@@ -335,33 +326,33 @@ def main():
                 f.write(gcode)
             
             # Send to Arduino
-            speak(engine, "Sending route to tactile display. This may take a few minutes.")
-            if send_gcode_to_arduino(gcode, engine):
-                speak(engine, "Tactile representation complete. You can now explore the route.")
+            speak(tts, "Sending route to tactile display. This may take a few minutes.")
+            if send_gcode_to_arduino(gcode, tts):
+                speak(tts, "Tactile representation complete. You can now explore the route.")
             else:
-                speak(engine, "Failed to send route to tactile display. Check connections and try again.")
+                speak(tts, "Failed to send route to tactile display. Check connections and try again.")
         
-        speak(engine, "Generating route description. Please wait...")
+        speak(tts, "Generating route description. Please wait...")
         description = generate_route_description(grid_map, use_local_llm=False, api_url=LLM_API_URL)
         
         # Speak the description
-        speak(engine, "Here is the description of the climbing route:")
-        speak(engine, "Press the cycle button to skip at any time.")
-        speak(engine, description)
+        speak(tts, "Here is the description of the climbing route:")
+        speak(tts, "Press the cycle button to skip at any time.")
+        speak(tts, description)
 
         while True:
-            repeat = select_from_options(engine, ["Yes", "No"], 
+            repeat = select_from_options(tts, ["Yes", "No"], 
                                       "Would you like to hear the description again?")
             if repeat == "Yes":
-                 speak(engine, description)
+                 speak(tts, description)
             else:
                 break
 
         # Completion
-        speak(engine, "Analysis complete. Thank you for using the climbing route analyzer.")
+        speak(tts, "Analysis complete. Thank you for using the climbing route analyzer.")
         
     except Exception as e:
-        speak(engine, f"An error occurred: {str(e)}")
+        speak(tts, f"An error occurred: {str(e)}")
     finally:
         # Clean up
         GPIO.cleanup()

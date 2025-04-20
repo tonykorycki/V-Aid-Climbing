@@ -20,21 +20,25 @@ def generate_route_description(grid_map: np.ndarray,
     Returns:
         str: Natural language description of the climbing route
     """
-    # Convert grid to string representation for the prompt
+    flipped_grid = np.flipud(grid_map)
+    
+    # Convert flipped grid to string representation for the prompt
     grid_str = ""
-    for row in grid_map:
+    for row in flipped_grid:
         grid_str += "".join(map(str, row)) + "\n"
     
     # Create a carefully designed prompt for the LLM
     prompt = f"""[INST]
-You are a professional climbing route setter. Analyze this 12x12 grid representing a climbing wall.
+You are a professional climbing route setter analyzing a climbing wall route.
 In this grid:
 - 0 represents empty space (no holds)
 - 1 represents a small hold
 - 2 represents a large hold 
 
-The bottom of the grid is the start, and the top is the end of the route.
-Here is the grid map:
+The bottom row (row 0) is the start of the climb, and the top row (row 11) is the finish.
+The climber moves from bottom to top (starting from row 0 and climbing upward).
+
+Here is the grid map with (0,0) as the bottom-left corner:
 
 {grid_str}
 
@@ -42,10 +46,11 @@ Here is the grid map:
 
 Provide a concise but informative description of this climbing route. Don't introduce yourself and focus on being concise.
 Include:
-1. The overall flow/pattern of the route
-2. A simple but direct, bottom to top, description of how to get from one hold to the next.
+1. The overall flow/pattern of the route from bottom to top
+2. A clear, step-by-step description of how to move from one hold to the next
+3. Mention whether holds are on the left side (columns 0-5) or right side (columns 6-11)
 
-Keep your response under 200 words and focus on being practical and helpful. [/INST]
+Keep your response under 300 words and focus on being practical and helpful. [/INST]
 """
     if use_local_llm:
         try:
@@ -72,7 +77,7 @@ Keep your response under 200 words and focus on being practical and helpful. [/I
                     prompt,
                     max_tokens=256,
                     temperature=0.1,
-                    top_p=0.9,
+                    top_p=0.95,
                     repeat_penalty=1.2,
                     echo=False
                 )
@@ -98,8 +103,8 @@ Keep your response under 200 words and focus on being practical and helpful. [/I
             "inputs": prompt,
             "parameters": {
                 "max_new_tokens": 300,
-                "temperature": 0.7,
-                "return_full_text": False
+                "temperature": 0.1,
+                "return_full_text": True
             }
         }
         

@@ -1,7 +1,7 @@
 #!/bin/bash
 source .venv/bin/activate
 echo "Virtual environment activated. Run 'deactivate' when finished."
-echo "Run 'python src/pi_CV_main.py' to start the application."
+echo "Run 'python src/master.py' to start the application."
 echo " To test components:"
 echo "   - API: python src/test_api.py"
 echo "   - Audio: python src/tests/test_audio.py"

@@ -14,6 +14,8 @@ sudo apt-get install -y libxcb-xinerama0 libxcb-image0 libxcb-icccm4 libxcb-keys
 # Additional X11/Qt dependencies to prevent visualization issues
 sudo apt-get install -y libxcb-randr0-dev libxcb-xkb-dev libxcb-icccm4-dev 
 sudo apt-get install -y libxcb-image0-dev libxcb-render-util0-dev libxcb1-dev
+# Install dependencies
+sudo apt-get install -y python3-pip portaudio19-dev python3-pygame
 # Install virtual framebuffer for headless operation
 sudo apt-get install -y xvfb
 
@@ -54,6 +56,8 @@ pip install numpy matplotlib pillow requests huggingface_hub pyttsx3
 pip install opencv-python
 pip install pyserial
 pip install ultralytics  # This will handle torch installation
+pip install mimic3-tts pygame
+
 
 # Create necessary directories
 mkdir -p data/images
@@ -77,5 +81,5 @@ echo "   - Text-to-speech: python src/tests/test_tts.py"
 echo "   - Buttons: python src/tests/test_buttons.py"
 echo "   - Arduino: python src/tests/test_arduino.py"
 echo "   - Camera: python src/tests/test_camera.py"
-echo "3. Run 'python src/pi_CV_main.py' to start the application"
+echo "3. Run 'python src/master.py' to start the application"
 echo "4. Or run './run_headless.sh' to run in headless mode"
