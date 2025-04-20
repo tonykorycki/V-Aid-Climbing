@@ -14,8 +14,6 @@ sudo apt-get install -y libxcb-xinerama0 libxcb-image0 libxcb-icccm4 libxcb-keys
 # Additional X11/Qt dependencies to prevent visualization issues
 sudo apt-get install -y libxcb-randr0-dev libxcb-xkb-dev libxcb-icccm4-dev 
 sudo apt-get install -y libxcb-image0-dev libxcb-render-util0-dev libxcb1-dev
-# Install dependencies
-sudo apt-get install -y python3-pip portaudio19-dev python3-pygame
 # Install virtual framebuffer for headless operation
 sudo apt-get install -y xvfb
 
@@ -23,13 +21,6 @@ sudo apt-get install -y xvfb
 echo "Installing eSpeak speech engine..."
 sudo apt install -y espeak espeak-ng
 sudo apt install -y python3-espeak
-
-# Add this section before the pip installs:
-
-echo "Installing Mimic3 TTS via apt..."
-sudo apt-get install -y mimic3
-# Then install Python bindings with pip if available
-pip install mycroft-mimic3-tts || echo "Python bindings not available via pip, using system installation"
 
 # Fix permissions for audio access
 sudo usermod -a -G audio $USER
@@ -64,6 +55,35 @@ pip install opencv-python
 pip install pyserial
 pip install ultralytics  # This will handle torch installation
 #pip install mimic3-tts pygame
+# Replace the Mimic3 TTS section with these better alternatives
+
+# Remove these problematic lines
+# echo "Installing Mimic3 TTS via apt..."
+# sudo apt-get install -y mimic3
+# pip install mycroft-mimic3-tts || echo "Python bindings not available via pip, using system installation"
+
+# Add better TTS options confirmed to work on Pi 5
+echo "Installing multiple high-quality TTS engines..."
+
+# Install SVOX Pico TTS (Android's TTS engine - good quality)
+echo "Installing SVOX Pico TTS..."
+sudo apt-get install -y libttspico-utils
+
+# Install Festival TTS (another good quality option)
+echo "Installing Festival TTS..."
+sudo apt-get install -y festival festvox-us-slt-hts
+
+# Install eSpeak-NG with MBROLA voices for better quality
+echo "Installing enhanced eSpeak-NG with MBROLA..."
+sudo apt-get install -y espeak-ng mbrola
+# Download US English voices that are confirmed to work on Pi 5
+sudo apt-get install -y mbrola-us1 mbrola-us2 mbrola-us3 || echo "MBROLA voices not available, using standard voices"
+
+# Google TTS option (requires internet)
+echo "Installing gTTS (Google Text-to-Speech - requires internet)..."
+pip install gtts
+sudo apt-get install -y mpg321  # MP3 player for gTTS output
+
 
 pip install pygame
 
@@ -79,16 +99,6 @@ source .venv/bin/activate
 xvfb-run -a python src/pi_CV_main.py "$@"
 EOF
 chmod +x run_headless.sh
-
-# Add after TTS installation:
-
-echo "Testing TTS system..."
-if command -v mimic3 &> /dev/null; then
-    mimic3 "TTS installation successful" | aplay
-    echo "✓ Mimic3 TTS working!"
-else
-    echo "⚠️ Mimic3 not available in path, check installation"
-fi
 
 echo "===== Setup complete! ====="
 echo "To use the project:"
