@@ -196,16 +196,20 @@ def grid_to_gcode(grid, x_offset=0, y_offset=0):
         f"G0 X{-x_offset} Y{-y_offset} F3000 ; Move to custom home position"
     ]
 
-    for y in range(GRID_HEIGHT):
-        for x in range(GRID_WIDTH):
-            val = grid[GRID_HEIGHT-y, x]
+    # Get the actual grid dimensions from the array
+    grid_height, grid_width = grid.shape
+    
+    for y in range(grid_height):
+        for x in range(grid_width):
+            # Read the value from the grid - make sure we're not exceeding array bounds
+            val = grid[y, x]
             if val in [1, 2]:
                 # Calculate position with negated coordinates to match inverted plotter direction
                 pos_x = -(x * GRID_SPACING + x_offset)
-                pos_y = -(y * GRID_SPACING + y_offset)
+                pos_y = -((grid_height-1-y) * GRID_SPACING + y_offset)  # Invert Y to match physical layout
 
                 # Move to position
-                gcode.append(f"G0 X{pos_x} Y{pos_y} F3000 ; Move to ({x},{y})")
+                gcode.append(f"G0 X{pos_x} Y{pos_y} F3000 ; Move to ({x},{grid_height-1-y})")
                 
                 # Activate actuator (servo down) - increased to S1000 for more travel
                 gcode.append("M3 S1000 ; Activate actuator (servo down)")
