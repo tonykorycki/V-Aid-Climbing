@@ -24,6 +24,13 @@ echo "Installing eSpeak speech engine..."
 sudo apt install -y espeak espeak-ng
 sudo apt install -y python3-espeak
 
+# Add this section before the pip installs:
+
+echo "Installing Mimic3 TTS via apt..."
+sudo apt-get install -y mimic3
+# Then install Python bindings with pip if available
+pip install mycroft-mimic3-tts || echo "Python bindings not available via pip, using system installation"
+
 # Fix permissions for audio access
 sudo usermod -a -G audio $USER
 
@@ -56,7 +63,9 @@ pip install numpy matplotlib pillow requests huggingface_hub pyttsx3
 pip install opencv-python
 pip install pyserial
 pip install ultralytics  # This will handle torch installation
-pip install mimic3-tts pygame
+#pip install mimic3-tts pygame
+
+pip install pygame
 
 
 # Create necessary directories
@@ -70,6 +79,16 @@ source .venv/bin/activate
 xvfb-run -a python src/pi_CV_main.py "$@"
 EOF
 chmod +x run_headless.sh
+
+# Add after TTS installation:
+
+echo "Testing TTS system..."
+if command -v mimic3 &> /dev/null; then
+    mimic3 "TTS installation successful" | aplay
+    echo "✓ Mimic3 TTS working!"
+else
+    echo "⚠️ Mimic3 not available in path, check installation"
+fi
 
 echo "===== Setup complete! ====="
 echo "To use the project:"
