@@ -307,8 +307,8 @@ def main():
         speak(tts, "This system will scan the climbing wall and create a tactile map.")
         
         # Ask if user wants to use camera or image from directory
-        use_camera = select_from_options(tts, ["Yes", "No"], 
-                                         "Do you want to use the camera to capture a new image?") == "Yes"
+        use_camera = select_from_options(tts, ["No", "Yes"], 
+                                         "Do you want to use the camera to capture a new image?") == "No"
         
         # Camera or file processing
         if use_camera:
