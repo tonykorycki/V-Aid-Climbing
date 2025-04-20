@@ -104,7 +104,7 @@ Keep your response under 300 words and focus on being practical and helpful. [/I
             "parameters": {
                 "max_new_tokens": 300,
                 "temperature": 0.1,
-                "return_full_text": True
+                "return_full_text": False
             }
         }
         
