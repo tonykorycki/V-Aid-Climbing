@@ -185,8 +185,38 @@ def send_gcode(ser, gcode, wait_for_confirmation=False):
         if not line:
             continue
             
-        # Intercept servo control commands
-        if line.startswith("M3 S"):
+        # Send non-servo commands to Arduino normally
+        if not line.startswith("M3") and not line.startswith("M5"):
+            print(f"Sending: {line}")
+            ser.write((line + "\n").encode())
+
+            # Wait for "ok" from Arduino
+            while True:
+                response = ser.readline().decode().strip().lower()
+                if response == "ok":
+                    break
+                elif response:
+                    print(f"  ↳ Arduino: {response}")
+            
+            # If this was a movement command, ensure motion is complete
+            if line.startswith("G0") or line.startswith("G1"):
+                print("Waiting for movement to complete...")
+                # Wait until machine is idle
+                is_moving = True
+                while is_moving:
+                    # Send status request
+                    ser.write(b"?")
+                    status_response = ser.readline().decode().strip()
+                    # Check if status contains "Idle" or "Idle:" indicating movement complete
+                    if "idle" in status_response.lower():
+                        is_moving = False
+                        print("Movement complete.")
+                    else:
+                        # Brief pause to avoid flooding controller
+                        time.sleep(0.1)
+            
+        # Handle servo control with Pi GPIO
+        elif line.startswith("M3 S"):
             print("Pi controlling servo: EXTEND")
             servo_pwm.ChangeDutyCycle(12.5)  # Full extension
             
@@ -202,7 +232,7 @@ def send_gcode(ser, gcode, wait_for_confirmation=False):
         elif line.startswith("M5"):
             print("Pi controlling servo: RETRACT")
             servo_pwm.ChangeDutyCycle(2.5)  # Retract position
-            time.sleep(0.1)
+            time.sleep(0.5)
             servo_pwm.ChangeDutyCycle(0)  # Stop signal to prevent jitter
             
             # Send placeholder command to Arduino for synchronization
@@ -213,23 +243,6 @@ def send_gcode(ser, gcode, wait_for_confirmation=False):
                     break
                 elif response:
                     print(f"  ↳ Arduino: {response}")
-        else:
-            # Send all other commands to Arduino normally
-            print(f"Sending: {line}")
-            ser.write((line + "\n").encode())
-
-            # Wait for "ok" from Arduino
-            while True:
-                response = ser.readline().decode().strip().lower()
-                if response == "ok":
-                    break
-                elif response:
-                    print(f"  ↳ Arduino: {response}")
-        
-        # If waiting for confirmation, prompt user
-        if wait_for_confirmation:
-            input("\n>>> Plotter has moved to the home position. Press ENTER to continue or CTRL+C to abort <<<\n")
-            wait_for_confirmation = False  # Only confirm once
 
 # ===== Test Options =====
 def move_to_corner_test(config, ser):
