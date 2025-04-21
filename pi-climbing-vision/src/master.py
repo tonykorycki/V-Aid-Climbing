@@ -511,8 +511,22 @@ def main():
         print(f"Error in main function: {e}")
         speak(tts, f"An error occurred: {str(e)}")
     finally:
-        # Clean up
-        GPIO.cleanup()
+        # Properly stop PWM before cleanup
+        if 'servo_pwm' in globals():
+            try:
+                servo_pwm.ChangeDutyCycle(0)
+                time.sleep(0.1)
+                servo_pwm.stop()
+                time.sleep(0.1)
+            except Exception as e:
+                print(f"Warning: Error stopping servo PWM: {e}")
+        
+        # Clean up with error handling
+        try:
+            GPIO.cleanup()
+            print("GPIO cleanup completed successfully")
+        except Exception as e:
+            print(f"Warning: Error during GPIO cleanup: {e}")
 
 if __name__ == "__main__":
     main()
