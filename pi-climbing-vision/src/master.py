@@ -209,6 +209,8 @@ def grid_to_gcode(grid, x_offset=0, y_offset=0):
 
     # Get the actual grid dimensions from the array
     grid_height, grid_width = grid.shape
+    grid = np.rot90(grid, k=3)
+
     
     for y in range(grid_height):
         for x in range(grid_width-1):
@@ -217,7 +219,7 @@ def grid_to_gcode(grid, x_offset=0, y_offset=0):
             if val in [1, 2]:
                 # Calculate position with negated coordinates to match inverted plotter direction
                 pos_x = -(x * GRID_SPACING + x_offset)
-                pos_y = -((grid_height-1-y) * GRID_SPACING + y_offset)  # Invert Y to match physical layout
+                pos_y = -(y * GRID_SPACING + y_offset)  # Invert Y to match physical layout
 
                 # Move to position
                 gcode.append(f"G0 X{pos_x} Y{pos_y} F3000 ; Move to ({x},{grid_height-1-y})")
@@ -299,8 +301,21 @@ def send_gcode_to_arduino(gcode, tts):
             # Handle servo control with Pi GPIO
             elif line.startswith("M3 S"):
                 print("Pi controlling servo: EXTEND")
-                servo_pwm.ChangeDutyCycle(12.5)  # Full extension
-                time.sleep(0.5)  # Allow time for extension
+    
+                    # Initial push
+                servo_pwm.ChangeDutyCycle(12.5)
+                time.sleep(0.3)
+                
+                # Wiggle sequence to overcome stiction
+                for _ in range(3):
+                    servo_pwm.ChangeDutyCycle(12.0)  # Slight retraction
+                    time.sleep(0.1)
+                    servo_pwm.ChangeDutyCycle(13.0)  # Extended push
+                    time.sleep(0.1)
+                
+                # Final position
+                servo_pwm.ChangeDutyCycle(12.8)
+                time.sleep(0.3)
                 
                 # Send placeholder command to Arduino for synchronization
                 ser.write(b"G4 P0\n")
@@ -368,7 +383,7 @@ def main():
         
         # Ask if user wants to use camera or image from directory
         use_camera = select_from_options(tts, ["No", "Yes"], 
-                                         "Do you want to use the camera to capture a new image?") == "No"
+                                         "Do you want to use the camera to capture a new image?") == "Yes"
         
         # Camera or file processing
         if use_camera:
@@ -453,8 +468,8 @@ def main():
             # Let user configure the home position
             speak(tts, "Setting up the plotter position.")
             # Default offsets, adjust based on your setup
-            x_offset = 20  # 20mm from the left edge
-            y_offset = 20  # 20mm from the bottom edge
+            x_offset = 0  # 20mm from the left edge
+            y_offset = 0  # 20mm from the bottom edge
             
             # Convert grid to GCODE with custom offset
             gcode = grid_to_gcode(grid_map, x_offset=x_offset, y_offset=y_offset)
