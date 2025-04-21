@@ -1,6 +1,7 @@
 import serial
 import time
 import sys
+import RPi.GPIO as GPIO  # Add GPIO import
 try:
     import serial.tools.list_ports  # For port detection
 except ImportError:
@@ -16,6 +17,7 @@ DEFAULT_FEEDRATE = 3000    # Movement speed
 DEFAULT_SERVO_PUSH_DELAY = 0.5  # seconds to hold actuator
 DEFAULT_SERVO_RETRACT_DELAY = 0.5  # seconds after actuator retract
 DEFAULT_ARDUINO_BAUD = 115200
+SERVO_PIN = 18  # GPIO pin for servo control
 
 # Try to auto-detect port or use default
 try:
@@ -26,6 +28,18 @@ try:
         DEFAULT_ARDUINO_PORT = '/dev/ttyUSB0'
 except:
     DEFAULT_ARDUINO_PORT = '/dev/ttyUSB0'  # Fallback
+
+# Initialize servo PWM control
+def setup_servo():
+    """Initialize the servo for direct control from Pi GPIO"""
+    GPIO.setmode(GPIO.BCM)
+    GPIO.setup(SERVO_PIN, GPIO.OUT)
+    global servo_pwm
+    servo_pwm = GPIO.PWM(SERVO_PIN, 50)  # 50Hz PWM frequency
+    servo_pwm.start(2.5)  # Initialize in retracted position
+    time.sleep(0.5)
+    servo_pwm.ChangeDutyCycle(0)  # Stop PWM signal to prevent jitter
+    print("✓ Servo control initialized on GPIO pin", SERVO_PIN)
 
 # ===== Arduino Detection =====
 def detect_arduino_ports():
@@ -170,16 +184,47 @@ def send_gcode(ser, gcode, wait_for_confirmation=False):
         line = line.strip()
         if not line:
             continue
-        print(f"Sending: {line}")
-        ser.write((line + "\n").encode())
+            
+        # Intercept servo control commands
+        if line.startswith("M3 S"):
+            print("Pi controlling servo: EXTEND")
+            servo_pwm.ChangeDutyCycle(12.5)  # Full extension
+            
+            # Send placeholder command to Arduino for synchronization
+            ser.write(b"G4 P0\n")
+            while True:
+                response = ser.readline().decode().strip().lower()
+                if response == "ok":
+                    break
+                elif response:
+                    print(f"  ↳ Arduino: {response}")
+                    
+        elif line.startswith("M5"):
+            print("Pi controlling servo: RETRACT")
+            servo_pwm.ChangeDutyCycle(2.5)  # Retract position
+            time.sleep(0.1)
+            servo_pwm.ChangeDutyCycle(0)  # Stop signal to prevent jitter
+            
+            # Send placeholder command to Arduino for synchronization
+            ser.write(b"G4 P0\n")
+            while True:
+                response = ser.readline().decode().strip().lower()
+                if response == "ok":
+                    break
+                elif response:
+                    print(f"  ↳ Arduino: {response}")
+        else:
+            # Send all other commands to Arduino normally
+            print(f"Sending: {line}")
+            ser.write((line + "\n").encode())
 
-        # Wait for "ok" from Arduino
-        while True:
-            response = ser.readline().decode().strip().lower()
-            if response == "ok":
-                break
-            elif response:
-                print(f"  ↳ Arduino: {response}")
+            # Wait for "ok" from Arduino
+            while True:
+                response = ser.readline().decode().strip().lower()
+                if response == "ok":
+                    break
+                elif response:
+                    print(f"  ↳ Arduino: {response}")
         
         # If waiting for confirmation, prompt user
         if wait_for_confirmation:
@@ -264,10 +309,27 @@ def calibrate_home_position(ser, config):
     send_gcode(ser, home_gcode, wait_for_confirmation=True)
     print("✅ Home position verified.")
 
+def quick_servo_test(ser):
+    """Test servo actuator using Pi control."""
+    print("\nTesting servo actuator directly from Raspberry Pi...")
+    print("Extending servo...")
+    servo_pwm.ChangeDutyCycle(12.5)  # Full extension
+    time.sleep(1)
+    
+    print("Retracting servo...")
+    servo_pwm.ChangeDutyCycle(2.5)  # Retracted position
+    time.sleep(0.5)
+    servo_pwm.ChangeDutyCycle(0)  # Stop signal
+    
+    print("✅ Servo actuator test complete.")
+
 # ===== Main Script =====
 def full_grid_test():
     """Run the full grid test with user configuration."""
     print("\n==== V-Aid Climbing Plotter Debug Utility ====")
+    
+    # Initialize servo control
+    setup_servo()
     
     # Detect Arduino ports first
     arduino_ports = detect_arduino_ports()
@@ -332,12 +394,7 @@ def full_grid_test():
                     
                 elif choice == "4":
                     # Quick servo test
-                    print("\nTesting servo actuator...")
-                    test_gcode = "M3 S255 ; Activate actuator\n"
-                    test_gcode += "G4 P1 ; Wait 1 second\n"
-                    test_gcode += "M5 ; Deactivate actuator"
-                    send_gcode(ser, test_gcode)
-                    print("✅ Servo actuator test complete.")
+                    quick_servo_test(ser)
                 
                 elif choice == "5":
                     # We already scanned at startup, but this allows rescanning
@@ -379,3 +436,9 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("\n\nTest aborted by user.")
         sys.exit(0)
+    finally:
+        # Clean up servo control
+        if 'servo_pwm' in globals():
+            servo_pwm.stop()
+        GPIO.cleanup()
+        print("GPIO pins cleaned up.")

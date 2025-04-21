@@ -16,6 +16,9 @@ from utils.llm_client import generate_route_description
 CYCLE_BUTTON_PIN = 17  # GPIO pin for cycling through options
 SELECT_BUTTON_PIN = 27  # GPIO pin for selecting options
 
+# Servo GPIO pin configuration
+SERVO_PIN = 18  # GPIO pin for servo control
+
 # Arduino serial connection
 ARDUINO_PORT = '/dev/ttyUSB0'  # Adjust as necessary for your setup
 ARDUINO_BAUD = 115200
@@ -137,6 +140,14 @@ def setup_gpio():
     GPIO.setmode(GPIO.BCM)
     GPIO.setup(CYCLE_BUTTON_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
     GPIO.setup(SELECT_BUTTON_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+    
+    # Add servo control
+    GPIO.setup(SERVO_PIN, GPIO.OUT)
+    global servo_pwm
+    servo_pwm = GPIO.PWM(SERVO_PIN, 50)  # 50Hz for servos
+    servo_pwm.start(2.5)  # Start in retracted position
+    time.sleep(0.5)
+    servo_pwm.ChangeDutyCycle(0)  # Stop PWM to prevent jitter
 
 # Wait for button press with debounce
 def wait_for_button_press(pin):
@@ -212,11 +223,11 @@ def grid_to_gcode(grid, x_offset=0, y_offset=0):
                 gcode.append(f"G0 X{pos_x} Y{pos_y} F3000 ; Move to ({x},{grid_height-1-y})")
                 
                 # Activate actuator (servo down) - increased to S1000 for more travel
-                gcode.append("M3 S1000 ; Activate actuator (servo down)")
+                gcode.append("M3 S1000 ; Activate actuator (servo up)")
                 gcode.append("G4 P0.5 ; Hold for 0.5s")
                 
                 # Deactivate actuator (servo up)
-                gcode.append("M5 ; Deactivate actuator (servo up)")
+                gcode.append("M5 ; Deactivate actuator (servo down)")
                 gcode.append("G4 P1 ; Wait 1s before next move")
 
     # Return to custom home position with negated coordinates
@@ -247,7 +258,7 @@ def send_gcode_to_arduino(gcode, tts):
 
         ser = serial.Serial(arduino_port, ARDUINO_BAUD, timeout=10)
         print("→ Flushing and waking Arduino...")
-        ser.write(b"\r\n\r\n")  # Wake/reset GRBL or other firmware
+        ser.write(b"\r\n\r\n")
         time.sleep(2)
         ser.flushInput()
 
@@ -256,15 +267,39 @@ def send_gcode_to_arduino(gcode, tts):
             if not line:
                 continue
 
-            print(f"Sending: {line}")
-            ser.write((line + "\n").encode())
-
-            while True:
-                response = ser.readline().decode().strip().lower()
-                if response == "ok":
-                    break
-                elif response:
-                    print(f"  ↳ Arduino response: {response}")
+            # Only intercept the servo control commands
+            if line.startswith("M3 S"):
+                print("Pi controlling servo: EXTEND")
+                servo_pwm.ChangeDutyCycle(12.5)  # Full extension
+                
+                # Send a placeholder command to Arduino to maintain synchronization
+                ser.write(b"G4 P0\n")
+                while True:
+                    response = ser.readline().decode().strip().lower()
+                    if response == "ok":
+                        break
+                
+            elif line.startswith("M5"):
+                print("Pi controlling servo: RETRACT")
+                servo_pwm.ChangeDutyCycle(2.5)
+                time.sleep(0.1)
+                servo_pwm.ChangeDutyCycle(0)
+                
+                # Send a placeholder command to Arduino to maintain synchronization
+                ser.write(b"G4 P0\n")
+                while True:
+                    response = ser.readline().decode().strip().lower()
+                    if response == "ok":
+                        break
+            else:
+                # Send all other commands (including G4 pauses) to Arduino normally
+                print(f"Sending: {line}")
+                ser.write((line + "\n").encode())
+                
+                while True:
+                    response = ser.readline().decode().strip().lower()
+                    if response == "ok":
+                        break
         
         return True
     except Exception as e:
