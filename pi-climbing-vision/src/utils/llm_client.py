@@ -45,12 +45,14 @@ Here is the grid map with (0,0) as the bottom-left corner:
 {"The predicted difficulty is " + difficulty if difficulty else ""}
 
 Provide a concise but informative description of this climbing route. Don't introduce yourself and focus on being concise.
+This description will be used to help visually impaired climbers understand the route, so gear it towards them.
+Avoid using numbers or coordinates, and instead focus on the following:
 Include:
 1. The overall flow/pattern of the route from bottom to top
 2. A clear, step-by-step description of how to move from one hold to the next
 3. Mention whether holds are on the left side (columns 0-5) or right side (columns 6-11)
 
-Keep your response under 300 words and focus on being practical and helpful. [/INST]
+Aim to keep your response under 300 words, but dont cut your description off in the middle of the sentence, and focus on being practical and helpful. [/INST]
 """
     if use_local_llm:
         try:
@@ -76,7 +78,7 @@ Keep your response under 300 words and focus on being practical and helpful. [/I
                 response = llm(
                     prompt,
                     max_tokens=256,
-                    temperature=0.1,
+                    temperature=0.25,
                     top_p=0.95,
                     repeat_penalty=1.2,
                     echo=False
