@@ -211,7 +211,7 @@ def grid_to_gcode(grid, x_offset=0, y_offset=0):
     grid_height, grid_width = grid.shape
     
     for y in range(grid_height):
-        for x in range(grid_width):
+        for x in range(grid_width-1):
             # Read the value from the grid - make sure we're not exceeding array bounds
             val = grid[y, x]
             if val in [1, 2]:
@@ -267,32 +267,8 @@ def send_gcode_to_arduino(gcode, tts):
             if not line:
                 continue
 
-            # Only intercept the servo control commands
-            if line.startswith("M3 S"):
-                print("Pi controlling servo: EXTEND")
-                servo_pwm.ChangeDutyCycle(12.5)  # Full extension
-                
-                # Send a placeholder command to Arduino to maintain synchronization
-                ser.write(b"G4 P0\n")
-                while True:
-                    response = ser.readline().decode().strip().lower()
-                    if response == "ok":
-                        break
-                
-            elif line.startswith("M5"):
-                print("Pi controlling servo: RETRACT")
-                servo_pwm.ChangeDutyCycle(2.5)
-                time.sleep(0.1)
-                servo_pwm.ChangeDutyCycle(0)
-                
-                # Send a placeholder command to Arduino to maintain synchronization
-                ser.write(b"G4 P0\n")
-                while True:
-                    response = ser.readline().decode().strip().lower()
-                    if response == "ok":
-                        break
-            else:
-                # Send all other commands (including G4 pauses) to Arduino normally
+            # Send non-servo commands to Arduino normally
+            if not line.startswith("M3") and not line.startswith("M5"):
                 print(f"Sending: {line}")
                 ser.write((line + "\n").encode())
                 
@@ -300,6 +276,55 @@ def send_gcode_to_arduino(gcode, tts):
                     response = ser.readline().decode().strip().lower()
                     if response == "ok":
                         break
+                    elif response:
+                        print(f"  ↳ Arduino: {response}")
+                
+                # If this was a movement command, ensure motion is complete
+                if line.startswith("G0") or line.startswith("G1"):
+                    print("Waiting for movement to complete...")
+                    # Wait until machine is idle
+                    is_moving = True
+                    while is_moving:
+                        # Send status request
+                        ser.write(b"?")
+                        status_response = ser.readline().decode().strip()
+                        # Check if status contains "Idle" indicating movement complete
+                        if "idle" in status_response.lower():
+                            is_moving = False
+                            print("Movement complete.")
+                        else:
+                            # Brief pause to avoid flooding controller
+                            time.sleep(0.1)
+                
+            # Handle servo control with Pi GPIO
+            elif line.startswith("M3 S"):
+                print("Pi controlling servo: EXTEND")
+                servo_pwm.ChangeDutyCycle(12.5)  # Full extension
+                time.sleep(0.5)  # Allow time for extension
+                
+                # Send placeholder command to Arduino for synchronization
+                ser.write(b"G4 P0\n")
+                while True:
+                    response = ser.readline().decode().strip().lower()
+                    if response == "ok":
+                        break
+                    elif response:
+                        print(f"  ↳ Arduino: {response}")
+                    
+            elif line.startswith("M5"):
+                print("Pi controlling servo: RETRACT")
+                servo_pwm.ChangeDutyCycle(2.5)  # Retract position
+                time.sleep(0.5)  # Increased from 0.1 to 0.5 for reliable retraction
+                servo_pwm.ChangeDutyCycle(0)  # Stop signal to prevent jitter
+                
+                # Send placeholder command to Arduino for synchronization
+                ser.write(b"G4 P0\n")
+                while True:
+                    response = ser.readline().decode().strip().lower()
+                    if response == "ok":
+                        break
+                    elif response:
+                        print(f"  ↳ Arduino: {response}")
         
         return True
     except Exception as e:

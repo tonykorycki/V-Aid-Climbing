@@ -219,6 +219,7 @@ def send_gcode(ser, gcode, wait_for_confirmation=False):
         elif line.startswith("M3 S"):
             print("Pi controlling servo: EXTEND")
             servo_pwm.ChangeDutyCycle(12.5)  # Full extension
+            time.sleep(0.5)  # Allow time for extension
             
             # Send placeholder command to Arduino for synchronization
             ser.write(b"G4 P0\n")
