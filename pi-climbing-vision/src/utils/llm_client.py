@@ -29,6 +29,7 @@ def generate_route_description(grid_map: np.ndarray,
     
     # Add legend
     grid_str += "\nLegend: '.' = Empty, 'S' = Small hold, 'L' = Large hold\n"
+    print(grid_str)  # Debugging output
     
     # Create the prompt for the LLM
     prompt = f"""[INST]

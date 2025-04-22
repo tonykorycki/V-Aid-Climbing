@@ -486,7 +486,7 @@ def main():
                                          "Would you like to create a tactile representation of the route?") == "Yes"
         
         if use_tactile:
-            speak(tts, "Generating GCODE for the tactile display. This will take a moment.")
+            speak(tts, "Generating GCODE for the tactile display.")
             
             # Let user configure the home position
             #speak(tts, "Setting up the plotter position.")
@@ -514,7 +514,7 @@ def main():
         
         # Speak the description using Google TTS for higher quality
         speak(tts, "Here is the description of the climbing route:", use_google=False)
-        speak(tts, "Press the cycle button to skip at any time.", use_google=False)
+        speak(tts, "Allow a moment for the Text to speech engine to start.", use_google=False)
         # Use Google TTS for the route description (better quality)
         speak(tts, description, use_google=True)
 
