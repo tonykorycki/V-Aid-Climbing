@@ -330,15 +330,15 @@ def send_gcode_to_arduino(gcode, tts):
     
                 # First push
                 servo_pwm.ChangeDutyCycle(12.5)
-                time.sleep(0.7)
+                time.sleep(0.5)
                 
                 # Brief slight retraction
-                servo_pwm.ChangeDutyCycle(8.0)
+                '''servo_pwm.ChangeDutyCycle(8.0)
                 time.sleep(0.3)
                 
                 # Second push - stronger
                 servo_pwm.ChangeDutyCycle(12.5)  # Push a bit further
-                time.sleep(0.5)
+                time.sleep(0.5)'''
                     
                 # Send placeholder command to Arduino for synchronization
                 ser.write(b"G4 P0\n")
