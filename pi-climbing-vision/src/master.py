@@ -106,7 +106,7 @@ class DualTTS:
             if len(text) > max_chars:
                 chunks = [text[i:i+max_chars] for i in range(0, len(text), max_chars)]
                 for chunk in chunks:
-                    tts = gTTS(text=chunk, lang='en', slow=False)
+                    tts = gTTS(text=chunk, lang='en', tld='com.au', slow=False)
                     tts.save(audio_file)
                     pygame.mixer.music.load(audio_file)
                     pygame.mixer.music.play()
@@ -304,18 +304,15 @@ def send_gcode_to_arduino(gcode, tts):
     
                     # Initial push
                 servo_pwm.ChangeDutyCycle(12.5)
-                time.sleep(0.3)
+                time.sleep(0.4)
                 
-                # Wiggle sequence to overcome stiction
-                for _ in range(3):
-                    servo_pwm.ChangeDutyCycle(12.0)  # Slight retraction
-                    time.sleep(0.1)
-                    servo_pwm.ChangeDutyCycle(13.0)  # Extended push
-                    time.sleep(0.1)
+                # Brief slight retraction
+                servo_pwm.ChangeDutyCycle(11.0)
+                time.sleep(0.2)
                 
-                # Final position
-                servo_pwm.ChangeDutyCycle(12.8)
-                time.sleep(0.3)
+                # Second push - stronger
+                servo_pwm.ChangeDutyCycle(13.0)  # Push a bit further
+                time.sleep(0.4)
                 
                 # Send placeholder command to Arduino for synchronization
                 ser.write(b"G4 P0\n")

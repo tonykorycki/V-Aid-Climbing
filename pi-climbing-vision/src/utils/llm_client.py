@@ -33,7 +33,7 @@ You are a professional climbing route setter analyzing a climbing wall route.
 In this grid:
 - 0 represents empty space (no holds)
 - 1 represents a small hold
-- 2 represents a large hold 
+- 2 represents a large hold or volume
 
 The bottom row (row 0) is the start of the climb, and the top row (row 11) is the finish.
 The climber moves from bottom to top (starting from row 0 and climbing upward).
@@ -49,7 +49,7 @@ This description will be used to help visually impaired climbers understand the 
 Avoid using numbers or coordinates, and instead focus on the following:
 Include:
 1. The overall flow/pattern of the route from bottom to top
-2. A clear, step-by-step description of how to move from one hold to the next
+2. A clear, step-by-step description of how to move from one hold to the next, identifying clusters of holds and volumes
 3. Mention whether holds are on the left side (columns 0-5) or right side (columns 6-11)
 
 Aim to keep your response under 300 words, but dont cut your description off in the middle of the sentence, and focus on being practical and helpful. [/INST]
@@ -78,7 +78,7 @@ Aim to keep your response under 300 words, but dont cut your description off in 
                 response = llm(
                     prompt,
                     max_tokens=256,
-                    temperature=0.25,
+                    temperature=0.2,
                     top_p=0.95,
                     repeat_penalty=1.2,
                     echo=False

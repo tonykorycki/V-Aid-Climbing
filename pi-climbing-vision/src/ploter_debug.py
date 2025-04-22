@@ -8,7 +8,7 @@ except ImportError:
     print("Warning: serial.tools.list_ports not available. Port detection disabled.")
 
 # ===== Default Configurable Constants =====
-DEFAULT_GRID_WIDTH = 12
+DEFAULT_GRID_WIDTH = 11
 DEFAULT_GRID_HEIGHT = 12
 DEFAULT_GRID_SPACING = 15  # mm between each pin
 DEFAULT_OFFSET_X = 0       # mm from X=0 to first column

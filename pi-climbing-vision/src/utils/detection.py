@@ -59,7 +59,7 @@ def detect_wall_area(image):
 def detect_and_classify_holds(image_path,
                               target_color='red',
                               sensitivity=25,
-                              min_area=200,
+                              min_area=30,
                               yolo_model_path=None):
     """
     Uses a YOLO model to detect and classify climbing holds in an image.
