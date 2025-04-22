@@ -333,8 +333,8 @@ def send_gcode_to_arduino(gcode, tts):
                 time.sleep(0.5)
                 
                 # Brief slight retraction
-                servo_pwm.ChangeDutyCycle(11.0)
-                time.sleep(0.2)
+                servo_pwm.ChangeDutyCycle(10.0)
+                time.sleep(0.3)
                 
                 # Second push - stronger
                 servo_pwm.ChangeDutyCycle(12.5)  # Push a bit further
