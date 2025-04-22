@@ -519,7 +519,7 @@ def main():
         speak(tts, description, use_google=True)
 
         while True:
-            repeat = select_from_options(tts, ["Yes", "No"], 
+            repeat = select_from_options(tts, ["No", "Yes"], 
                                       "Would you like to hear the description again?")
             if repeat == "Yes":
                  # Continue using Google TTS for the route description
