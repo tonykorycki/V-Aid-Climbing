@@ -96,14 +96,14 @@ def detect_and_classify_holds(image_path,
         print(f"Error loading YOLO model: {e}")
         return [], np.zeros((12, 12), dtype=np.int32), image, image, (0, 0, orig_w, orig_h)
 
-    # Run YOLO on the full image (no wall cropping)
+    #run YOLO on the full image
     results = yolo_model.predict(source=image, conf=0.25)
     if len(results) == 0 or len(results[0].boxes) == 0:
         print("No holds detected by YOLO.")
         return [], np.zeros((12, 12), dtype=np.int32), image, image, (0, 0, orig_w, orig_h)
 
-    # Define HSV color ranges with adaptive sensitivity
-    v_base = 50 - sensitivity // 4  # more forgiving with brightness
+    # define HSV color ranges with adaptive sensitivity
+    v_base = 50 - sensitivity // 4 
     s_base = 100 - sensitivity // 4
 
     color_ranges = {

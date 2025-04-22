@@ -2,7 +2,7 @@ import requests
 import json
 import numpy as np
 from typing import Dict, Optional
-from paths import HF_API_TOKEN  # <-- Add this import
+from paths import HF_API_TOKEN
 
 def generate_route_description(grid_map: np.ndarray, 
                                difficulty: Optional[str] = None, 
