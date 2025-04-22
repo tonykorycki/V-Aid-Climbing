@@ -218,8 +218,16 @@ def send_gcode(ser, gcode, wait_for_confirmation=False):
         # Handle servo control with Pi GPIO
         elif line.startswith("M3 S"):
             print("Pi controlling servo: EXTEND")
-            servo_pwm.ChangeDutyCycle(12.5)  # Full extension
-            time.sleep(0.5)  # Allow time for extension
+            servo_pwm.ChangeDutyCycle(12.5)
+            time.sleep(0.7)
+            
+            # Brief slight retraction
+            servo_pwm.ChangeDutyCycle(8.0)
+            time.sleep(0.3)
+            
+            # Second push - stronger
+            servo_pwm.ChangeDutyCycle(12.5)  # Push a bit further
+            time.sleep(0.5)
             
             # Send placeholder command to Arduino for synchronization
             ser.write(b"G4 P0\n")

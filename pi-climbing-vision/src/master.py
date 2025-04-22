@@ -329,11 +329,11 @@ def send_gcode_to_arduino(gcode, tts):
                 print("Pi controlling servo: EXTEND")
     
                 # First push
-                servo_pwm.ChangeDutyCycle(12.0)
-                time.sleep(0.5)
+                servo_pwm.ChangeDutyCycle(12.5)
+                time.sleep(0.7)
                 
                 # Brief slight retraction
-                servo_pwm.ChangeDutyCycle(10.0)
+                servo_pwm.ChangeDutyCycle(8.0)
                 time.sleep(0.3)
                 
                 # Second push - stronger
