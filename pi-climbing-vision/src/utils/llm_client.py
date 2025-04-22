@@ -8,51 +8,59 @@ def generate_route_description(grid_map: np.ndarray,
                                difficulty: Optional[str] = None, 
                                use_local_llm: bool = False, 
                                api_url: Optional[str] = None) -> str:
-    """
-    Generate a natural language description of the climbing route based on the grid map.
-    
-    Args:
-        grid_map: 12x12 numpy array where 0=no hold, 1=small hold, 2=large hold/volume
-        difficulty: Predicted difficulty level of the route
-        use_local_llm: Whether to use a local LLM (not recommended on Pi)
-        api_url: URL for API-based LLM
-        
-    Returns:
-        str: Natural language description of the climbing route
-    """
-    flipped_grid = np.flipud(grid_map)
-    
-    # Convert flipped grid to string representation for the prompt
+    # Create a clearer ASCII representation of the grid (similar to display_text_grid)
     grid_str = ""
-    for row in flipped_grid:
-        grid_str += "".join(map(str, row)) + "\n"
     
-    # Create a carefully designed prompt for the LLM
+    # Add column markers (double digit spacing)
+    grid_str += "  " + "".join([f"{i:2d}" for i in range(grid_map.shape[1])]) + "\n"
+    grid_str += "  " + "-" * (grid_map.shape[1] * 2) + "\n"
+    
+    # Add rows without flipping
+    for i, row in enumerate(grid_map):
+        line = f"{i:2d}|"
+        for cell in row:
+            if cell == 0:
+                line += ". "  # Empty space
+            elif cell == 1:
+                line += "S "  # Small hold
+            elif cell == 2:
+                line += "L "  # Large hold
+        grid_str += line + "\n"
+    
+    # Add legend
+    grid_str += "\nLegend: '.' = Empty, 'S' = Small hold, 'L' = Large hold\n"
+    
+    # Create the prompt for the LLM
     prompt = f"""[INST]
-You are a professional climbing route setter analyzing a climbing wall route.
-In this grid:
-- 0 represents empty space (no holds)
-- 1 represents a small hold
-- 2 represents a large hold or volume
+You are analyzing a climbing route represented in a grid.
 
-The bottom row (row 0) is the start of the climb, and the top row (row 11) is the finish.
-The climber moves from bottom to top (starting from row 0 and climbing upward).
+Legend:
+- . (dot) = empty space (no hold)
+- S = small hold
+- L = large hold/volume
 
-Here is the grid map with (0,0) as the bottom-left corner:
+The grid is oriented as follows:
+- Top row (row 0) is the finish of the climb
+- Bottom row (row 11) is the start
+- Columns 0-5 represent the left side of the wall
+- Columns 6-11 represent the right side of the wall
+
+Here is the climbing route grid:
 
 {grid_str}
 
-{"The predicted difficulty is " + difficulty if difficulty else ""}
+{"The estimated difficulty is " + difficulty if difficulty else ""}
 
-Provide a concise but informative description of this climbing route. Don't introduce yourself and focus on being concise.
-This description will be used to help visually impaired climbers understand the route, so gear it towards them.
-Avoid using numbers or coordinates, and instead focus on the following:
-Include:
-1. The overall flow/pattern of the route from bottom to top
-2. A clear, step-by-step description of how to move from one hold to the next, identifying clusters of holds and volumes
-3. Mention whether holds are on the left side (columns 0-5) or right side (columns 6-11)
+Describe this climbing route for a visually impaired climber. Be concise but informative (150-200 words).
+Focus on:
+1. The overall path and flow from bottom to top
+2. Location of key holds (left side vs right side)
+3. Transitions between sections of the route
+4. Any particularly challenging sequences
 
-Aim to keep your response under 300 words, but dont cut your description off in the middle of the sentence, and focus on being practical and helpful. [/INST]
+Avoid using grid coordinates or technical jargon. Describe the route in practical terms.
+Make it easy to understand for someone who cannot see the grid.
+[/INST]
 """
     if use_local_llm:
         try:

@@ -95,7 +95,7 @@ class DualTTS:
             print(f"SVOX Pico TTS error: {e}")
     
     def _speak_google(self, text):
-        """Use Google TTS for speech."""
+        """Use Google TTS for speech with male voice and faster speed."""
         import pygame
         try:
             from gtts import gTTS
@@ -106,25 +106,51 @@ class DualTTS:
             if len(text) > max_chars:
                 chunks = [text[i:i+max_chars] for i in range(0, len(text), max_chars)]
                 for chunk in chunks:
-                    tts = gTTS(text=chunk, lang='en', tld='com.au', slow=False)
+                    # Use UK server which typically has a male voice
+                    tts = gTTS(text=chunk, lang='en', tld='co.uk', slow=False)
                     tts.save(audio_file)
+                    
+                    # Load and play audio at faster speed using a trick with pygame
                     pygame.mixer.music.load(audio_file)
                     pygame.mixer.music.play()
-                    while pygame.mixer.music.get_busy():
-                        pygame.time.Clock().tick(10)
+                    
+                    # Adjust playback speed (requires separate implementation)
+                    self._speed_up_playback(1.3)  # Play at 1.3x speed
+                    
             else:
-                tts = gTTS(text=text, lang='en', slow=False)
+                # Use UK server which typically has a male voice
+                tts = gTTS(text=text, lang='en', tld='co.uk', slow=False)
                 tts.save(audio_file)
+                
+                # Load and play audio at faster speed
                 pygame.mixer.music.load(audio_file)
                 pygame.mixer.music.play()
-                while pygame.mixer.music.get_busy():
-                    pygame.time.Clock().tick(10)
+                
+                # Adjust playback speed
+                self._speed_up_playback(1.3)  # Play at 1.3x speed
+                
         except Exception as e:
             print(f"Google TTS error: {e}")
             # Fallback to Pico
             if self.has_pico:
                 print("Falling back to SVOX Pico...")
                 self._speak_pico(text)
+                
+    def _speed_up_playback(self, speed_factor):
+        """Wait for audio to complete but at an accelerated speed."""
+        import pygame
+        import time
+        
+        # Get the length of the audio
+        length = pygame.mixer.music.get_pos()
+        
+        # Calculate wait time based on speed factor
+        wait_time = 0.01 / speed_factor
+        
+        # Wait for playback to complete with adjusted timing
+        while pygame.mixer.music.get_busy():
+            pygame.time.Clock().tick(10 * speed_factor)  # Increase tick rate
+            time.sleep(wait_time)  # Sleep less time per iteration
 
 # Initialize text-to-speech engine
 def init_speech():
@@ -302,18 +328,18 @@ def send_gcode_to_arduino(gcode, tts):
             elif line.startswith("M3 S"):
                 print("Pi controlling servo: EXTEND")
     
-                    # Initial push
-                servo_pwm.ChangeDutyCycle(12.5)
-                time.sleep(0.4)
+                # First push
+                servo_pwm.ChangeDutyCycle(12.0)
+                time.sleep(0.5)
                 
                 # Brief slight retraction
                 servo_pwm.ChangeDutyCycle(11.0)
                 time.sleep(0.2)
                 
                 # Second push - stronger
-                servo_pwm.ChangeDutyCycle(13.0)  # Push a bit further
-                time.sleep(0.4)
-                
+                servo_pwm.ChangeDutyCycle(12.5)  # Push a bit further
+                time.sleep(0.5)
+                    
                 # Send placeholder command to Arduino for synchronization
                 ser.write(b"G4 P0\n")
                 while True:
@@ -433,7 +459,7 @@ def main():
         brightness = hsv_img[:, :, 2].mean()
         sensitivity = int(60 - (brightness / 255) * 40)
         sensitivity = max(10, min(60, sensitivity))
-        min_area = 200  # Default minimum area
+        min_area = 30  # Default minimum area
         
         speak(tts, f"Processing image to detect {target_color} holds.")
         
@@ -463,7 +489,7 @@ def main():
             speak(tts, "Generating GCODE for the tactile display. This will take a moment.")
             
             # Let user configure the home position
-            speak(tts, "Setting up the plotter position.")
+            #speak(tts, "Setting up the plotter position.")
             # Default offsets, adjust based on your setup
             x_offset = 0  # 20mm from the left edge
             y_offset = 0  # 20mm from the bottom edge
