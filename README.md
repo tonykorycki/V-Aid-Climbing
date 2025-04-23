@@ -28,12 +28,41 @@ A computer vision system designed to help visually impaired climbers understand 
 - Output
 - Advanced Configuration
 - Troubleshooting
+- License
 
 ---
+
+## Repository Structure
+
+```
+├── pi-climbing-vision/         # Raspberry Pi optimized code
+│   ├── src/                    # Source code
+│   │   ├── master.py           # Main entry point with tactile output
+│   │   ├── pi_CV_main.py       # Vision + LLM without tactile
+│   │   ├── pi_API_test.py      # Simplified API test version
+│   │   ├── paths.py            # Configuration paths
+│   │   ├── tests/              # Test scripts
+│   │   ├── models/             # YOLO models
+│   │   └── utils/              # Utility functions
+│   ├── data/                   # Data directories
+│   │   ├── images/             # Input images
+│   │   └── results/            # Output results
+│   ├── setup.sh                # Setup script
+│   ├── activate.sh             # Environment activation
+│   └── run_headless.sh         # Headless execution script
+├── computer_vision/            # Computer-based analysis scripts
+│   ├── CV_LLM_integration.py   # Optimized with LLM
+│   ├── CV-ML-2.py              # ML difficulty prediction
+│   ├── CV_type2.py             # Newest CV script with auto-brightness
+│   ├── results/                # Output results
+│   └── train4/                 # Training configuration
+```
 
 ## Overview
 
 This project provides computer vision tools to analyze climbing routes by detecting holds, mapping them onto a grid, and generating natural language descriptions. The system uses YOLO object detection to identify climbing holds and volumes, a Language Model (LLM) to describe the routes, and a tactile plotter system to create physical representations for the visually impaired.
+
+
 
 ## Components
 
@@ -98,7 +127,7 @@ The project has three main components:
 
 4. **Debug the plotter** (if needed):
    ```bash
-   python src/ploter_debug.py
+   python src/tests/test_plotter.py
    ```
 
 5. **Test TTS engines** (if needed):
@@ -250,16 +279,20 @@ The system produces several outputs:
   ```python
   LLM_API_URL = "https://api-inference.huggingface.co/models/HuggingFaceH4/zephyr-7b-beta"
   ```
-- To configure the tactile plotter, use `ploter_debug.py` for calibration
+- To configure the tactile plotter, use `src/test_plotter.py` for calibration
 
 ## Troubleshooting
 
 - If camera detection fails, ensure your camera permissions are set correctly
 - For memory issues on Raspberry Pi, try reducing image resolution in paths.py
 - If LLM responses are slow, consider using the API option instead of local models
-- For plotter issues, run `ploter_debug.py` to test connections and calibration
+- For plotter issues, run `src/tests/test_plotter.py` to test connections and calibration
 - If TTS isn't working, run `test_tts.py` to check which engines are available
 
 ---
+
+## License
+
+This project is licensed under the [MIT License](LICENSE) - see the LICENSE file for details.
 
 *This project was created to assist visually impaired climbers and is under active development.*
